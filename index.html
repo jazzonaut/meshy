@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meshy — WebGPU Particle Field</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      #app { position: fixed; inset: 0; }
+      canvas { display: block; }
+      #hint {
+        position: fixed; left: 16px; bottom: 14px;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: rgba(255, 255, 255, 0.45); pointer-events: none; user-select: none;
+      }
+      #unsupported {
+        position: fixed; inset: 0; display: none; place-items: center;
+        font: 16px/1.6 system-ui, sans-serif; color: #ddd; text-align: center; padding: 2rem;
+      }
+      #unsupported.show { display: grid; }
+      #unsupported code { color: #7ab7ff; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hint">drag: orbit · scroll: zoom · right-drag: pan · W/E/R: gizmo move/rotate/scale · G: toggle gizmo</div>
+    <div id="unsupported">
+      <div>
+        <p><strong>WebGPU isn't available in this browser.</strong></p>
+        <p>Use a recent Chrome, Edge, Firefox, or Safari&nbsp;26+ build.<br />
+        This app is WebGPU-only (no WebGL fallback by design).</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
