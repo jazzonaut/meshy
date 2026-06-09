@@ -4,6 +4,7 @@ import type { Postprocessing } from '../Postprocessing';
 import type { Capture } from '../Capture';
 import type { Controls } from '../Controls';
 import type { Stage } from '../Stage';
+import type { SceneState } from '../presetUrl';
 
 export type PointerMode = 'Off' | 'Push' | 'Pull';
 
@@ -54,4 +55,8 @@ export interface Controller {
   onStatsToggle: (on: boolean) => void;
   onMorphShape: (shape: MorphShape) => void;
   onMorphParam: () => void;
+  /** Capture the current look as a portable scene state (for saving a preset). */
+  snapshot: () => SceneState;
+  /** Apply a saved scene state, rebuilding the field so every param takes effect. */
+  applyPreset: (state: SceneState) => void;
 }

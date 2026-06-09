@@ -7,7 +7,7 @@ import { PointerTracker } from './PointerTracker';
 import { createPostprocessing, type Postprocessing } from './Postprocessing';
 import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
-import { readHash, buildShareUrl } from './presetUrl';
+import { readHash, buildShareUrl, type SceneState } from './presetUrl';
 import type { Controller, ViewState, PointerState, MorphState, DemoState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
@@ -81,6 +81,8 @@ export class App {
     this.applyPointerForce();
     // Gate morph at startup: morphAmount defaults to 1, but with no shape selected
     // the target buffer is empty, so without this the field collapses to the origin.
+    // A shared link / preset may have restored a shape, so seed its target too.
+    this.applyMorphTarget();
     this.applyMorphUniforms();
 
     this.controller = {
@@ -115,6 +117,8 @@ export class App {
         this.applyMorphUniforms();
       },
       onMorphParam: () => this.applyMorphUniforms(),
+      snapshot: () => this.snapshot(),
+      applyPreset: (state) => this.applyPreset(state),
     };
 
     // Reflect any hash-loaded state onto the engine bits that read it once.
@@ -222,6 +226,7 @@ export class App {
     if (!state) return;
     if (state.params) Object.assign(this.params, state.params);
     if (state.pointerMode) this.pointerState.mode = state.pointerMode;
+    if (state.morphShape) this.morphState.shape = state.morphShape;
     if (typeof state.count === 'number') {
       this.count = state.count;
       const label = Object.keys(COUNT_OPTIONS).find((k) => COUNT_OPTIONS[k] === state.count);
@@ -229,9 +234,92 @@ export class App {
     }
   }
 
+  /** A portable snapshot of the current look — shared by Share links and presets. */
+  private snapshot(): SceneState {
+    return {
+      params: { ...this.params },
+      count: this.count,
+      pointerMode: this.pointerState.mode,
+      morphShape: this.morphState.shape,
+    };
+  }
+
+  /**
+   * Apply a saved/shared scene state. The expensive full rebuild (buffer realloc +
+   * shader recompile) is reserved for a particle-count change — count drives buffer
+   * size. For the common case (same count) everything is pushed onto the existing
+   * field's uniforms live, so it's instant. Particle positions are only re-seeded if
+   * a structural param (radius/warp) actually changed.
+   */
+  private applyPreset(state: SceneState) {
+    const prev = {
+      radius: this.params.radius,
+      warpScale: this.params.warpScale,
+      warpStrength: this.params.warpStrength,
+      shape: this.morphState.shape,
+    };
+
+    if (state.params) Object.assign(this.params, state.params);
+    this.pointerState.mode = state.pointerMode;
+    this.morphState.shape = state.morphShape ?? 'None';
+
+    const countChanged = typeof state.count === 'number' && state.count !== this.count;
+    if (typeof state.count === 'number') this.count = state.count;
+    const label = Object.keys(COUNT_OPTIONS).find((k) => COUNT_OPTIONS[k] === this.count);
+    if (label) this.view.countLabel = label;
+
+    if (countChanged) {
+      this.rebuild(); // only path that needs new buffers — createUniforms re-seeds all
+      return;
+    }
+
+    // Live apply onto the current field: no realloc, no recompile.
+    this.field.setMotionMode(this.params.motion);
+    this.field.setMaterialStyle(this.params.materialStyle);
+    this.syncLiveUniforms();
+    this.applyPointerForce();
+    const structureChanged =
+      this.params.radius !== prev.radius ||
+      this.params.warpScale !== prev.warpScale ||
+      this.params.warpStrength !== prev.warpStrength;
+    if (structureChanged) {
+      this.regenerate(); // re-seeds structure and re-fits the morph target to the radius
+    } else if (this.morphState.shape !== prev.shape) {
+      this.applyMorphTarget(); // shape changed but radius didn't — just re-sample it
+    }
+    this.applyMorphUniforms();
+    this.field.recolor(); // reflect the new colours (warm/cool set above)
+  }
+
+  /** Push every live (non-init-pass) param onto the current field's uniforms. */
+  private syncLiveUniforms() {
+    const u = this.field.uniforms;
+    this.field.setSpeed(this.params.speed);
+    u.flowScale.value = this.params.flowScale;
+    u.flowStrength.value = this.params.flowStrength;
+    u.timeSpeed.value = this.params.timeSpeed;
+    u.spring.value = this.params.spring;
+    u.damping.value = this.params.damping;
+    u.boidSep.value = this.params.boidSep;
+    u.boidAli.value = this.params.boidAli;
+    u.boidCoh.value = this.params.boidCoh;
+    u.boidPerception.value = this.params.boidPerception;
+    // Keep the hash cell ≥ perception so the 3×3×3 neighbour search stays complete.
+    u.cellSize.value = Math.max(this.params.boidPerception * 1.15, 2.5);
+    u.boidMaxSpeed.value = this.params.boidMaxSpeed;
+    u.slimeSense.value = this.params.slimeSense;
+    u.slimeWander.value = this.params.slimeWander;
+    u.slimeDecay.value = this.params.slimeDecay;
+    u.size.value = this.params.size;
+    u.exposure.value = this.params.exposure;
+    u.warm.value.set(this.params.warmColor);
+    u.cool.value.set(this.params.coolColor);
+    // radius / warp* are init-pass inputs — applied via regenerate() when they change.
+  }
+
   /** Write the current look to the URL hash and copy a shareable link. */
   private share() {
-    const url = buildShareUrl({ params: this.params, count: this.count, pointerMode: this.pointerState.mode });
+    const url = buildShareUrl(this.snapshot());
     location.hash = url.split('#')[1] ?? '';
     navigator.clipboard?.writeText(url).catch(() => {});
   }

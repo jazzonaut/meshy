@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 import type { Controller } from '../types';
@@ -42,6 +43,7 @@ export function mountUi(controller: Controller) {
     },
   });
   app.use(ToastService);
+  app.use(ConfirmationService);
   app.provide(controllerKey, controller);
   app.mount(host);
 }
