@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="app-dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Meshy — WebGPU Particle Field</title>
     <style>
       :root { color-scheme: dark; }
@@ -14,6 +14,8 @@
         font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
         color: rgba(255, 255, 255, 0.45); pointer-events: none; user-select: none;
       }
+      /* Keyboard/gizmo hints are meaningless on touch. */
+      @media (max-width: 640px) { #hint { display: none; } }
       #unsupported {
         position: fixed; inset: 0; display: none; place-items: center;
         font: 16px/1.6 system-ui, sans-serif; color: #ddd; text-align: center; padding: 2rem;

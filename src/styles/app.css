@@ -1,0 +1,21 @@
+/*
+ * Tailwind v4 + PrimeVue. The @layer declaration fixes cascade order so Tailwind
+ * utilities can still override PrimeVue component styles (PrimeVue is registered
+ * into the `primevue` layer via its `cssLayer` option in main.ts).
+ */
+@layer theme, base, primevue, components, utilities;
+
+@import 'tailwindcss';
+@import 'tailwindcss-primeui';
+
+/* The control surfaces float over the WebGPU canvas — let pointer events through
+ * the empty gaps so orbit/drag still works, while the panels themselves capture. */
+.ui-root {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+.ui-root :where(button, input, select, .p-component, [data-pc-section]) {
+  pointer-events: auto;
+}
