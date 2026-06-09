@@ -10,7 +10,7 @@ import { BUCKET_CAP, BOIDS_MODE, PREDATOR_MODE, DROPLET_MODE, CRYSTAL_MODE, GRID
  */
 export function createFlockKernels(ctx: FieldContext, count: number) {
   const { u, buffers, grid, forces } = ctx;
-  const { cellCount, cellTable, positions, velocities } = buffers;
+  const { cellCount, cellTable, positions, velocities, homes } = buffers;
 
   // 1. Zero every cell counter.
   const gridClear = Fn(() => {
@@ -105,6 +105,16 @@ export function createFlockKernels(ctx: FieldContext, count: number) {
         vel.addAssign(sep.mul(u.boidSep.mul(2.0)).mul(dt));
         vel.addAssign(cohForce.mul(u.boidCoh.mul(0.3)).mul(dt));
       });
+    });
+
+    // Stragglers that found NO neighbours get none of the steering above, so the
+    // min-speed cruise would carry them off on the shared wind as a coherent,
+    // tightly-packed thread — a bright "worm"/arc once bloom hits the star
+    // particles in it (worst on a sparse field, e.g. the 250k mobile default).
+    // Steer the loners back toward their home so they rejoin the flock and the
+    // thread dissolves; particles that are actually flocking are untouched.
+    If(n.lessThan(0.5), () => {
+      vel.addAssign(homes.element(self).sub(pos).mul(u.spring.mul(0.6)).mul(dt));
     });
 
     // Predator: a single point sweeps through the flock; nearby boids flee it. It
