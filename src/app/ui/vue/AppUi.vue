@@ -40,7 +40,7 @@ function share() {
   <Toast position="bottom-center" />
 
   <div
-    class="pointer-events-auto fixed left-2 right-2 top-2 flex flex-col gap-1.5 rounded-lg border border-white/8 bg-surface-950/55 p-1.5 shadow-lg backdrop-blur-md sm:right-auto sm:w-[clamp(17rem,30vw,23rem)]"
+    class="pointer-events-auto fixed left-[max(0.5rem,env(safe-area-inset-left))] right-[max(0.5rem,env(safe-area-inset-right))] top-[max(0.5rem,env(safe-area-inset-top))] flex flex-col gap-1.5 rounded-lg border border-white/8 bg-surface-950/55 p-1.5 shadow-lg backdrop-blur-md sm:right-auto sm:w-[clamp(17rem,30vw,23rem)]"
   >
     <ModePicker />
 

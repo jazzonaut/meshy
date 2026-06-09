@@ -22,16 +22,28 @@ export class PointerTracker {
     private readonly scene: THREE.Scene,
     private readonly getField: () => ParticleField,
   ) {
-    dom.addEventListener('pointermove', (e: PointerEvent) => {
+    const activateAt = (e: PointerEvent) => {
       this.ndc.x = (e.clientX / window.innerWidth) * 2 - 1;
       this.ndc.y = -(e.clientY / window.innerHeight) * 2 + 1;
       this.over = true;
       this.getField().uniforms.pointerActive.value = 1;
-    });
-    dom.addEventListener('pointerleave', () => {
+    };
+    const deactivate = () => {
       this.over = false;
       this.getField().uniforms.pointerActive.value = 0;
+    };
+
+    dom.addEventListener('pointermove', activateAt);
+    // Touch has no hover, so first contact is what activates the well.
+    dom.addEventListener('pointerdown', activateAt);
+    dom.addEventListener('pointerleave', deactivate);
+    // ...and a lifted/cancelled finger must explicitly clear it, or it stays stuck
+    // active at the last touch point (pointerleave is unreliable for touch). Mouse
+    // is left to pointerleave so a click doesn't disable the well.
+    dom.addEventListener('pointerup', (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') deactivate();
     });
+    dom.addEventListener('pointercancel', deactivate);
   }
 
   update() {

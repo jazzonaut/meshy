@@ -8,6 +8,7 @@ import { createPostprocessing, type Postprocessing } from './Postprocessing';
 import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
 import { readHash, buildShareUrl, type SceneState } from './presetUrl';
+import { isMobileLike } from './device';
 import type { Controller, ViewState, PointerState, MorphState, DemoState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
@@ -44,7 +45,8 @@ export class App {
   private readonly morphState: MorphState;
   private readonly demo: DemoState;
   private demoElapsed = 0;
-  private count = COUNT_OPTIONS['500k'];
+  // Lighter default on phone-class devices; a shared link / preset still overrides.
+  private count = COUNT_OPTIONS[isMobileLike() ? '250k' : '500k'];
 
   private field: ParticleField;
   private readonly stage = new Stage();
@@ -61,7 +63,7 @@ export class App {
   ) {
     const wrap = opts.wrapState ?? (<T extends object>(s: T) => s);
     this.params = wrap<FieldParams>({ ...DEFAULT_PARAMS });
-    this.view = wrap<ViewState>({ autoRotate: false, gizmo: false, axes: false, countLabel: '500k' });
+    this.view = wrap<ViewState>({ autoRotate: false, gizmo: false, axes: false, countLabel: isMobileLike() ? '250k' : '500k' });
     this.pointerState = wrap<PointerState>({ mode: 'Off' });
     this.morphState = wrap<MorphState>({ shape: 'None' });
     this.demo = wrap<DemoState>({ enabled: false, interval: 6, fps: false });
@@ -143,7 +145,11 @@ export class App {
     const delta = this.clock.getDelta();
     this.stepDemo(delta);
     this.pointer.update();
-    this.field.update(delta);
+    // Paused (speed 0) freezes the sim: every motion/colour kernel would produce
+    // identical buffers, so skip the GPU compute entirely and just re-present.
+    // Interactive edits (colour, material, mode) recolour via their own paths, and
+    // the camera can still orbit because render/controls run regardless.
+    if (this.params.speed > 0) this.field.update(delta);
     this.controls.update();
     this.post.render();
     this.capture.afterRender();
