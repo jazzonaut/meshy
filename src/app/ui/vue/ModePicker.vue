@@ -31,11 +31,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
   <div class="relative">
     <Button
       severity="secondary"
+      size="small"
       class="w-full !justify-between"
       :aria-expanded="open"
       @click="open = !open"
     >
-      <span class="truncate">{{ currentLabel }}</span>
+      <span class="truncate text-sm">{{ currentLabel }}</span>
       <span class="ml-2 text-xs transition-transform" :class="{ 'rotate-180': open }">▾</span>
     </Button>
 

@@ -40,16 +40,17 @@ function share() {
   <Toast position="bottom-center" />
 
   <div
-    class="pointer-events-auto fixed left-3 right-3 top-3 flex flex-col gap-2 rounded-xl border border-white/10 bg-surface-900/70 p-2 shadow-2xl backdrop-blur-xl sm:right-auto sm:w-[clamp(20rem,40vw,32rem)]"
+    class="pointer-events-auto fixed left-2 right-2 top-2 flex flex-col gap-1.5 rounded-lg border border-white/8 bg-surface-950/55 p-1.5 shadow-lg backdrop-blur-md sm:right-auto sm:w-[clamp(17rem,30vw,23rem)]"
   >
     <ModePicker />
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-1.5">
       <Select
         :model-value="c.view.countLabel"
         :options="countOpts"
         option-label="label"
         option-value="value"
+        size="small"
         class="w-28"
         @update:model-value="setCount"
       />
@@ -58,12 +59,13 @@ function share() {
         :options="pointerOpts"
         option-label="label"
         option-value="value"
+        size="small"
         :allow-empty="false"
         @update:model-value="setPointer"
       />
-      <div class="ml-auto flex gap-2">
-        <Button label="🔗 Share" severity="secondary" @click="share" />
-        <Button label="⚙ Studio" @click="studioOpen = true" />
+      <div class="ml-auto flex gap-1.5">
+        <Button label="Share" size="small" severity="secondary" text @click="share" />
+        <Button label="Studio" size="small" severity="secondary" @click="studioOpen = true" />
       </div>
     </div>
   </div>

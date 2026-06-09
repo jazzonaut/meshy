@@ -14,7 +14,7 @@ const hex = computed({
 </script>
 
 <template>
-  <div class="flex items-center justify-between py-2 text-xs">
+  <div class="flex items-center justify-between py-2.5 text-xs">
     <span class="text-surface-200">{{ label }}</span>
     <ColorPicker v-model="hex" format="hex" />
   </div>

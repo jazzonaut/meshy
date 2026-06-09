@@ -67,7 +67,7 @@ function setPerception(v: number) {
     v-model:visible="visible"
     position="right"
     header="Studio"
-    class="!w-[380px] !max-w-[92vw]"
+    class="!w-[330px] !max-w-[90vw]"
   >
     <Accordion>
       <!-- View ------------------------------------------------------------- -->
@@ -141,7 +141,8 @@ function setPerception(v: number) {
               :options="shapeOpts"
               option-label="label"
               option-value="value"
-              class="w-44"
+              size="small"
+              class="w-40"
               @update:model-value="(s) => c.onMorphShape(s)"
             />
           </div>
@@ -161,6 +162,7 @@ function setPerception(v: number) {
               :options="materialOpts"
               option-label="label"
               option-value="value"
+              size="small"
               :allow-empty="false"
               @update:model-value="setMaterial"
             />
@@ -183,7 +185,8 @@ function setPerception(v: number) {
               :options="toneOpts"
               option-label="label"
               option-value="value"
-              class="w-44"
+              size="small"
+              class="w-40"
               @update:model-value="(k) => c.post.setTone(TONE[k])"
             />
           </div>
@@ -200,7 +203,7 @@ function setPerception(v: number) {
         <AccordionHeader>Capture</AccordionHeader>
         <AccordionContent>
           <div class="flex flex-col gap-3 py-2">
-            <Button label="📷 screenshot (PNG)" severity="secondary" @click="c.capture.requestScreenshot()" />
+            <Button label="📷 screenshot (PNG)" size="small" severity="secondary" @click="c.capture.requestScreenshot()" />
             <ToggleRow label="● record (webm)" v-model="recording" @change="(v) => c.capture.toggleRecording(v)" />
           </div>
         </AccordionContent>
@@ -224,7 +227,7 @@ function setPerception(v: number) {
           <SliderRow label="radius" :min="4" :max="60" :step="0.5" v-model="p.radius" />
           <SliderRow label="warp scale" :min="0.01" :max="0.3" :step="0.001" v-model="p.warpScale" />
           <SliderRow label="warp strength" :min="0" :max="40" :step="0.5" v-model="p.warpStrength" />
-          <Button class="mt-2 w-full" label="↻ regenerate / reseed" severity="secondary" @click="c.onRegenerate()" />
+          <Button class="mt-2 w-full" label="↻ regenerate / reseed" size="small" severity="secondary" @click="c.onRegenerate()" />
         </AccordionContent>
       </AccordionPanel>
     </Accordion>
