@@ -293,7 +293,7 @@ function deletePresetClicked(event: Event) {
           <SliderRow label="bloom strength" :min="0" :max="3" :step="0.01" v-model="c.post.bloomPass.strength.value" />
           <SliderRow label="bloom radius" :min="0" :max="1" :step="0.01" v-model="c.post.bloomPass.radius.value" />
           <SliderRow label="bloom threshold" :min="0" :max="1" :step="0.01" v-model="c.post.bloomPass.threshold.value" />
-          <SliderRow label="trails (long exposure)" :min="0" :max="0.96" :step="0.01" v-model="c.post.trailDamp.value" />
+          <SliderRow label="trails (long exposure)" :min="0" :max="0.96" :step="0.01" v-model="c.post.trailDamp.value" @input="(v) => c.post.setTrails(v)" />
         </AccordionContent>
       </AccordionPanel>
 

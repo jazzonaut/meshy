@@ -19,12 +19,30 @@ export function createPostprocessing(
   const scenePassColor = scenePass.getTextureNode('output');
   const trailDamp = uniform(0.0);
   const trailed = afterImage(scenePassColor, trailDamp);
-  const bloomPass = bloom(trailed, 0.5, 1.0, 0.0); // strength, radius, threshold
-  postProcessing.outputNode = (trailed as any).add(bloomPass);
+  const bloomPass = bloom(scenePassColor, 0.5, 1.0, 0.0); // strength, radius, threshold
+
+  // Two output graphs. afterImage keeps a feedback buffer that leaks faint
+  // comet-trails on some mobile GPUs even at damp 0 (uninitialised feedback
+  // texture), so it's an opt-in layer: kept entirely out of the graph until the
+  // user dials trails in. Trails default off, so mobile gets the clean path.
+  const passthrough = (scenePassColor as any).add(bloomPass);
+  const withTrails = (trailed as any).add(bloomPass);
+  let trailsOn = false;
+  postProcessing.outputNode = passthrough;
 
   return {
     bloomPass,
     trailDamp,
+    /** Set the long-exposure trail amount; swaps the afterImage layer in/out at 0. */
+    setTrails: (damp: number) => {
+      trailDamp.value = damp;
+      const want = damp > 0.0001;
+      if (want !== trailsOn) {
+        trailsOn = want;
+        postProcessing.outputNode = want ? withTrails : passthrough;
+        postProcessing.needsUpdate = true;
+      }
+    },
     render: () => postProcessing.render(),
     /** Switch tone mapping and rebuild the output transform. */
     setTone: (toneMapping: THREE.ToneMapping) => {
