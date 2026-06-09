@@ -1,4 +1,6 @@
-import { Fn, hash, instanceIndex, float, sqrt, vec3, vec4, mx_noise_float, mx_fractal_noise_vec3 } from 'three/tsl';
+import { Fn, fract, hash, instanceIndex, float, sqrt, vec3, vec4, mx_noise_float, mx_fractal_noise_vec3 } from 'three/tsl';
+
+const TAU = Math.PI * 2;
 import type { FieldContext } from '../context';
 
 /**
@@ -27,7 +29,12 @@ export function createInitKernel({ u, buffers }: FieldContext, count: number) {
     // directional DC offset to the balanced base distribution.
     const z = float(1).sub(fi.add(0.5).div(u.particleCount).mul(2.0));
     const xy = sqrt(float(1).sub(z.mul(z)));
-    const angle = fi.mul(2.399963229728653).add(seedF);
+    // Range-reduce the golden-angle spiral into [0, 2π) BEFORE the trig. At 250k
+    // particles `fi · golden` reaches ~6e5 rad; mobile GPUs lose all precision in
+    // sin/cos for arguments that large and collapse a band of particles onto a
+    // bright filament. Desktop GPUs range-reduce internally, so it only showed on
+    // mobile. fract() keeps the argument small and the distribution intact.
+    const angle = fract(fi.mul(2.399963229728653).add(seedF).div(TAU)).mul(TAU);
     const dir = vec3(angle.cos().mul(xy), z, angle.sin().mul(xy));
     const r = h4.pow(0.5).mul(u.radius);
     const seedOffset = vec3(u.seed.mul(3.17), u.seed.mul(1.91), u.seed.mul(2.53));
