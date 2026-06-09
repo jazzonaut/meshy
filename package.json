@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@10.28.2",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -11,21 +12,21 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@primeuix/themes": "^2.0.3",
-    "primevue": "^4.5.5",
-    "three": "latest",
-    "vue": "^3.5.35"
+    "@primeuix/themes": "2.0.3",
+    "primevue": "4.5.5",
+    "three": "0.184.0",
+    "vue": "3.5.35"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/three": "latest",
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@tailwindcss/vite": "4.3.0",
+    "@types/three": "0.184.1",
+    "@vitejs/plugin-vue": "6.0.7",
     "@webgpu/types": "0.1.70",
-    "tailwindcss": "^4.3.0",
-    "tailwindcss-primeui": "^0.6.1",
+    "tailwindcss": "4.3.0",
+    "tailwindcss-primeui": "0.6.1",
     "typescript": "6.0.3",
     "vite": "8.0.16",
     "vitest": "4.1.8",
-    "vue-tsc": "^3.3.4"
+    "vue-tsc": "3.3.4"
   }
 }

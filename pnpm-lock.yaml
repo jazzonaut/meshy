@@ -9,35 +9,35 @@ importers:
   .:
     dependencies:
       '@primeuix/themes':
-        specifier: ^2.0.3
+        specifier: 2.0.3
         version: 2.0.3
       primevue:
-        specifier: ^4.5.5
+        specifier: 4.5.5
         version: 4.5.5(vue@3.5.35(typescript@6.0.3))
       three:
-        specifier: latest
+        specifier: 0.184.0
         version: 0.184.0
       vue:
-        specifier: ^3.5.35
+        specifier: 3.5.35
         version: 3.5.35(typescript@6.0.3)
     devDependencies:
       '@tailwindcss/vite':
-        specifier: ^4.3.0
+        specifier: 4.3.0
         version: 4.3.0(vite@8.0.16(jiti@2.7.0))
       '@types/three':
-        specifier: latest
+        specifier: 0.184.1
         version: 0.184.1
       '@vitejs/plugin-vue':
-        specifier: ^6.0.7
+        specifier: 6.0.7
         version: 6.0.7(vite@8.0.16(jiti@2.7.0))(vue@3.5.35(typescript@6.0.3))
       '@webgpu/types':
         specifier: 0.1.70
         version: 0.1.70
       tailwindcss:
-        specifier: ^4.3.0
+        specifier: 4.3.0
         version: 4.3.0
       tailwindcss-primeui:
-        specifier: ^0.6.1
+        specifier: 0.6.1
         version: 0.6.1(tailwindcss@4.3.0)
       typescript:
         specifier: 6.0.3
@@ -49,7 +49,7 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(vite@8.0.16(jiti@2.7.0))
       vue-tsc:
-        specifier: ^3.3.4
+        specifier: 3.3.4
         version: 3.3.4(typescript@6.0.3)
 
 packages:
