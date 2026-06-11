@@ -1,4 +1,5 @@
 import type { FieldParams, MorphShape } from '../field';
+import type { PointerMode } from './ui/types';
 
 /**
  * A full snapshot of the field's look — the unit both the Share link (URL hash)
@@ -8,7 +9,7 @@ import type { FieldParams, MorphShape } from '../field';
 export interface SceneState {
   params: FieldParams;
   count: number;
-  pointerMode: 'Off' | 'Push' | 'Pull';
+  pointerMode: PointerMode;
   morphShape?: MorphShape;
 }
 

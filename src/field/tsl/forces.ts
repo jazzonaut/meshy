@@ -9,16 +9,55 @@ import { cn } from './curlNoise';
  * current compute stack and mutates the given velocity element.
  */
 export function createForces(u: FieldUniforms, buffers: FieldBuffers) {
-  // Cursor force well: particles within pointerRadius get pushed along
-  // (pos − pointer): positive strength repels, negative attracts; linear falloff
-  // to the edge. pointerActive zeroes it when the mouse is off-canvas.
+  // Cursor force well: particles within pointerRadius react to the cursor, with a
+  // linear falloff to the edge. pointerMode (see POINTER_MODES in ui/types.ts)
+  // selects the action; pointerActive zeroes everything when the mouse is
+  // off-canvas. All actions share the cursor position, strength and radius.
   const applyPointer = (pos: any, vel: any, dt: any) => {
     const pd = pos.sub(u.pointer);
     const pl = pd.length().add(0.001);
     If(pl.lessThan(u.pointerRadius), () => {
-      vel.addAssign(
-        pd.div(pl).mul(u.pointerRadius.sub(pl)).mul(u.pointerStrength).mul(u.pointerActive).mul(dt),
-      );
+      const dir = pd.div(pl); // outward unit vector from the cursor
+      const fall = u.pointerRadius.sub(pl); // 0 at the edge, max at the centre
+      const k = u.pointerStrength.mul(u.pointerActive).mul(dt); // shared scalar
+
+      // 1 Push — shove particles outward.
+      If(u.pointerMode.equal(1), () => {
+        vel.addAssign(dir.mul(fall).mul(k));
+      });
+      // 2 Pull — draw particles inward.
+      If(u.pointerMode.equal(2), () => {
+        vel.subAssign(dir.mul(fall).mul(k));
+      });
+      // 3 Swirl — tangential orbit around the cursor (about world up).
+      If(u.pointerMode.equal(3), () => {
+        vel.addAssign(dir.cross(vec3(0, 1, 0)).normalize().mul(fall).mul(k));
+      });
+      // 4 Black Hole — swirl + inward pull, so particles spiral into the cursor.
+      If(u.pointerMode.equal(4), () => {
+        const tan = dir.cross(vec3(0, 1, 0)).normalize();
+        vel.addAssign(tan.mul(0.7).sub(dir).mul(fall).mul(k));
+      });
+      // 5 Stir — inject local curl-noise turbulence to agitate the field.
+      If(u.pointerMode.equal(5), () => {
+        vel.addAssign(cn(pos.mul(u.flowScale.mul(3)).add(u.pointer)).mul(fall.div(u.pointerRadius)).mul(k));
+      });
+      // 6 Freeze — drain velocity toward stasis wherever the cursor passes.
+      If(u.pointerMode.equal(6), () => {
+        vel.subAssign(vel.mul(fall.div(u.pointerRadius)).mul(k.mul(0.4)));
+      });
+      // 7 Shell / Magnet — push toward a sphere shell at half the well radius:
+      // outside it pulls in, inside it pushes out, so particles settle on the shell.
+      If(u.pointerMode.equal(7), () => {
+        vel.addAssign(dir.mul(u.pointerRadius.mul(0.5).sub(pl)).mul(k));
+      });
+      // 8 Tornado — strong tangential swirl + gentle inward pull + upward lift, so
+      // particles wind up a funnel column instead of collapsing to a point (Black
+      // Hole) or orbiting flat (Swirl).
+      If(u.pointerMode.equal(8), () => {
+        const tan = dir.cross(vec3(0, 1, 0)).normalize();
+        vel.addAssign(tan.sub(dir.mul(0.4)).add(vec3(0, 0.6, 0)).mul(fall).mul(k));
+      });
     });
   };
 

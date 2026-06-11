@@ -19,3 +19,31 @@
 .ui-root :where(button, input, select, .p-component, [data-pc-section]) {
   pointer-events: auto;
 }
+
+/* Frosted glass: give the dropdown overlays (Select / Listbox), popovers and the
+ * Studio drawer the same translucent, blurred surface as the top toolbar so the
+ * scene shows through them. Most of these teleport to <body>, so the rules are
+ * global and unlayered — which lets them win over PrimeVue's `primevue` layer. */
+.p-select-overlay,
+.p-listbox,
+.p-popover,
+.p-confirmpopup,
+.p-drawer {
+  background: color-mix(in srgb, var(--p-surface-950) 60%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+/* Stop inner sections from repainting an opaque slab over the translucency
+ * (form inputs keep their own background for legibility). */
+.p-select-overlay .p-select-list,
+.p-listbox .p-listbox-header,
+.p-listbox .p-listbox-list,
+.p-drawer .p-drawer-header,
+.p-drawer .p-drawer-content {
+  background: transparent;
+}
+/* Lighten the drawer's modal scrim so the scene still reads behind the panel. */
+.p-drawer-mask {
+  background: rgb(0 0 0 / 0.25);
+}

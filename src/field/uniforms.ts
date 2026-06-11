@@ -30,12 +30,14 @@ export function createUniforms(p: FieldParams, count: number) {
     // the GUI; left a touch larger to keep buckets from overflowing.
     cellSize: uniform(Math.max(p.boidPerception * 1.15, 2.5)),
     // Pointer well. pointer = cursor world position; pointerActive gates it to
-    // when the mouse is over the canvas; pointerStrength is signed (set by the
-    // GUI Push/Pull selector). Initialised inert — the GUI turns it on.
+    // when the mouse is over the canvas; pointerStrength is the (positive)
+    // magnitude; pointerMode picks which action the well performs (0 = Off → no
+    // branch matches, so the well is inert). Initialised inert — the UI turns it on.
     pointer: uniform(new THREE.Vector3()),
     pointerActive: uniform(0),
     pointerRadius: uniform(p.pointerRadius),
     pointerStrength: uniform(0),
+    pointerMode: uniform(0),
     slimeSense: uniform(p.slimeSense),
     slimeWander: uniform(p.slimeWander),
     slimeDecay: uniform(p.slimeDecay),

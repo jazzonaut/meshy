@@ -9,7 +9,7 @@ import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
 import { readHash, buildShareUrl, type SceneState } from './presetUrl';
 import { isMobileLike } from './device';
-import type { Controller, ViewState, PointerState, MorphState, DemoState } from './ui/types';
+import { POINTER_MODES, type Controller, type ViewState, type PointerState, type MorphState, type DemoState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
   '100k': 100_000,
@@ -212,9 +212,16 @@ export class App {
   }
 
   private applyPointerForce() {
-    const sign = this.pointerState.mode === 'Push' ? 1 : this.pointerState.mode === 'Pull' ? -1 : 0;
-    this.field.uniforms.pointerStrength.value = sign * this.params.pointerStrength;
+    // pointerMode index drives the shader branch (POINTER_MODES[0] === 'Off' → 0,
+    // which matches no branch, so the well is inert). Strength is the positive
+    // magnitude; each action decides its own direction.
+    const mode = POINTER_MODES.indexOf(this.pointerState.mode);
+    this.field.uniforms.pointerMode.value = mode < 0 ? 0 : mode;
+    this.field.uniforms.pointerStrength.value = this.params.pointerStrength;
     this.field.uniforms.pointerRadius.value = this.params.pointerRadius;
+    // On touch devices, an active action takes over one-finger drags so they
+    // steer the well rather than orbit the camera (pinch-zoom still works).
+    this.controls.setTouchClaimsPointer(isMobileLike() && this.pointerState.mode !== 'Off');
   }
 
   private regenerate() {
@@ -323,11 +330,16 @@ export class App {
     // radius / warp* are init-pass inputs — applied via regenerate() when they change.
   }
 
-  /** Write the current look to the URL hash and copy a shareable link. */
-  private share() {
+  /** Copy a shareable link to the clipboard. Does not touch the current URL —
+   *  the caller toasts success/failure off the returned flag. */
+  private async share(): Promise<boolean> {
     const url = buildShareUrl(this.snapshot());
-    location.hash = url.split('#')[1] ?? '';
-    navigator.clipboard?.writeText(url).catch(() => {});
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private onResize = () => {

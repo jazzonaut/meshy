@@ -52,6 +52,17 @@ export class Controls {
     this.orbit.autoRotate = v;
   }
 
+  /**
+   * When a pointer-well action claims touch input (mobile), stop one-finger drags
+   * from orbiting/panning so they drive the well instead — the PointerTracker then
+   * receives the move. Two-finger pinch-zoom stays live. No-op feel on desktop,
+   * where a hovering mouse already moves the well without consuming the drag.
+   */
+  setTouchClaimsPointer(on: boolean) {
+    this.orbit.enableRotate = !on;
+    this.orbit.enablePan = !on;
+  }
+
   /** Attach/detach the gizmo to the current target. attach() can re-show the
    *  helper, so visibility is set after. */
   setGizmo(on: boolean) {

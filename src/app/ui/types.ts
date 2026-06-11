@@ -6,7 +6,25 @@ import type { Controls } from '../Controls';
 import type { Stage } from '../Stage';
 import type { SceneState } from '../presetUrl';
 
-export type PointerMode = 'Off' | 'Push' | 'Pull';
+/**
+ * Cursor "action" the pointer well performs. Index in this array is what the
+ * shader branches on (`pointerMode` uniform); 'Off' is 0 so it matches no branch
+ * and the well stays inert. Each action reuses the same cursor world-position and
+ * the strength/radius tuned in Studio.
+ */
+export const POINTER_MODES = [
+  'Off',
+  'Push', // repel particles outward from the cursor
+  'Pull', // draw particles inward to the cursor
+  'Swirl', // orbit particles tangentially around the cursor
+  'Black Hole', // pull + swirl: spiral particles inward
+  'Stir', // inject local curl turbulence around the cursor
+  'Freeze', // drain velocity to stasis wherever the cursor passes
+  'Shell', // settle particles onto a sphere shell around the cursor (magnet)
+  'Tornado', // swirl + inward pull + upward lift: wind particles up a funnel
+] as const;
+
+export type PointerMode = (typeof POINTER_MODES)[number];
 
 export interface ViewState {
   autoRotate: boolean;
@@ -50,7 +68,8 @@ export interface Controller {
   onMotionPreset: (index: number) => void;
   onPointerForce: () => void;
   onRegenerate: () => void;
-  onShare: () => void;
+  /** Copy a shareable link to the clipboard; resolves true on success. */
+  onShare: () => Promise<boolean>;
   onDemoToggle: (on: boolean) => void;
   onStatsToggle: (on: boolean) => void;
   onMorphShape: (shape: MorphShape) => void;
