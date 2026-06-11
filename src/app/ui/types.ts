@@ -14,17 +14,47 @@ import type { SceneState } from '../presetUrl';
  */
 export const POINTER_MODES = [
   'Off',
-  'Push', // repel particles outward from the cursor
-  'Pull', // draw particles inward to the cursor
-  'Swirl', // orbit particles tangentially around the cursor
   'Black Hole', // pull + swirl: spiral particles inward
-  'Stir', // inject local curl turbulence around the cursor
+  'Clear Strokes', // clear recorded draw gestures, then return to Off
+  'Draw Pull', // press/drag to draw a decaying pull stroke
+  'Draw Push', // press/drag to draw a decaying push stroke
+  'Draw Swirl', // press/drag to draw a decaying swirl stroke
   'Freeze', // drain velocity to stasis wherever the cursor passes
+  'Pull', // draw particles inward to the cursor
+  'Push', // repel particles outward from the cursor
   'Shell', // settle particles onto a sphere shell around the cursor (magnet)
+  'Stir', // inject local curl turbulence around the cursor
+  'Swirl', // orbit particles tangentially around the cursor
   'Tornado', // swirl + inward pull + upward lift: wind particles up a funnel
 ] as const;
 
 export type PointerMode = (typeof POINTER_MODES)[number];
+
+export interface PointerAction {
+  shaderMode: number;
+  drawOnly?: boolean;
+  clearStrokes?: boolean;
+}
+
+/**
+ * UI actions are sorted independently from shader branch ids. Keep these ids in
+ * sync with the branches in field/tsl/forces.ts.
+ */
+export const POINTER_ACTIONS: Record<PointerMode, PointerAction> = {
+  Off: { shaderMode: 0 },
+  'Black Hole': { shaderMode: 4 },
+  'Clear Strokes': { shaderMode: 0, clearStrokes: true },
+  'Draw Pull': { shaderMode: 2, drawOnly: true },
+  'Draw Push': { shaderMode: 1, drawOnly: true },
+  'Draw Swirl': { shaderMode: 3, drawOnly: true },
+  Freeze: { shaderMode: 6 },
+  Pull: { shaderMode: 2 },
+  Push: { shaderMode: 1 },
+  Shell: { shaderMode: 7 },
+  Stir: { shaderMode: 5 },
+  Swirl: { shaderMode: 3 },
+  Tornado: { shaderMode: 8 },
+};
 
 export interface ViewState {
   autoRotate: boolean;

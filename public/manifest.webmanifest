@@ -1,0 +1,19 @@
+{
+  "name": "Meshy",
+  "short_name": "Meshy",
+  "description": "A WebGPU particle field for interactive motion studies and installation-style visuals.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#05070a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

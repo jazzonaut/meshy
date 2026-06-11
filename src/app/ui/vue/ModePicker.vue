@@ -9,7 +9,9 @@ const c = useController();
 const open = ref(false);
 const isMobile = window.matchMedia('(max-width: 640px)');
 
-const options = MOTION_MODES.map((label, value) => ({ label, value }));
+const options = MOTION_MODES
+  .map((label, value) => ({ label, value }))
+  .sort((a, b) => a.label.localeCompare(b.label));
 const currentLabel = computed(() => MOTION_MODES[c.params.motion]);
 
 function onChange(e: { value: number | null }) {

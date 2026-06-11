@@ -3,8 +3,18 @@ import { App } from './app/App';
 import { mountUi } from './app/ui/vue/mountUi';
 import './styles/app.css';
 
+function registerServiceWorker() {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Offline support is best-effort; the app itself still runs normally.
+    });
+  });
+}
+
 /** Entry point: verify WebGPU support, boot the engine, then mount the Vue UI. */
 async function main() {
+  registerServiceWorker();
   if (!navigator.gpu) {
     document.getElementById('unsupported')?.classList.add('show');
     return;

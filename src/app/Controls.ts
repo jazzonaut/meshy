@@ -53,12 +53,10 @@ export class Controls {
   }
 
   /**
-   * When a pointer-well action claims touch input (mobile), stop one-finger drags
-   * from orbiting/panning so they drive the well instead — the PointerTracker then
-   * receives the move. Two-finger pinch-zoom stays live. No-op feel on desktop,
-   * where a hovering mouse already moves the well without consuming the drag.
+   * When an interaction claims drag input, stop one-finger / left-drag gestures
+   * from orbiting or panning so PointerTracker can use them for the force well.
    */
-  setTouchClaimsPointer(on: boolean) {
+  setPointerClaimsOrbit(on: boolean) {
     this.orbit.enableRotate = !on;
     this.orbit.enablePan = !on;
   }

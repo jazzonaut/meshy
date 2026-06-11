@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import Select from 'primevue/select';
 import Button from 'primevue/button';
 import Toast from 'primevue/toast';
@@ -13,13 +13,30 @@ import { POINTER_MODES, type PointerMode } from '../types';
 const c = useController();
 const toast = useToast();
 const studioOpen = ref(false);
+const fullscreen = ref(Boolean(document.fullscreenElement));
 
-const pointerOpts = POINTER_MODES.map((m) => ({ label: m, value: m }));
+const pointerOpts = POINTER_MODES
+  .map((m) => ({ label: m, value: m }))
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 function setPointer(mode: PointerMode | null) {
   if (mode == null) return;
   c.pointerState.mode = mode;
   c.onPointerForce();
+}
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else if (document.fullscreenEnabled) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch {
+    toast.add({ severity: 'warn', summary: 'Full screen unavailable', detail: 'The browser blocked the request.', life: 2200 });
+  }
+}
+function syncFullscreen() {
+  fullscreen.value = Boolean(document.fullscreenElement);
 }
 async function share() {
   const ok = await c.onShare();
@@ -29,6 +46,9 @@ async function share() {
     toast.add({ severity: 'warn', summary: 'Copy failed', detail: 'Could not access the clipboard.', life: 2500 });
   }
 }
+
+onMounted(() => document.addEventListener('fullscreenchange', syncFullscreen));
+onUnmounted(() => document.removeEventListener('fullscreenchange', syncFullscreen));
 </script>
 
 <template>
@@ -69,6 +89,17 @@ async function share() {
       <Button label="Studio" size="small" severity="secondary" @click="studioOpen = true" />
     </div>
   </div>
+
+  <Button
+    severity="secondary"
+    text
+    class="pointer-events-auto fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] h-9 w-9 !p-0 text-base shadow-lg backdrop-blur-md"
+    :aria-label="fullscreen ? 'Exit full screen' : 'Enter full screen'"
+    :title="fullscreen ? 'Exit full screen' : 'Enter full screen'"
+    @click="toggleFullscreen"
+  >
+    <span aria-hidden="true">{{ fullscreen ? '×' : '⛶' }}</span>
+  </Button>
 
   <StudioDrawer v-model:visible="studioOpen" />
 </template>

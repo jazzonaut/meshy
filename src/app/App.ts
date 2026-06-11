@@ -9,7 +9,7 @@ import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
 import { readHash, buildShareUrl, type SceneState } from './presetUrl';
 import { isMobileLike } from './device';
-import { POINTER_MODES, type Controller, type ViewState, type PointerState, type MorphState, type DemoState } from './ui/types';
+import { POINTER_ACTIONS, type Controller, type ViewState, type PointerState, type MorphState, type DemoState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
   '100k': 100_000,
@@ -212,16 +212,21 @@ export class App {
   }
 
   private applyPointerForce() {
-    // pointerMode index drives the shader branch (POINTER_MODES[0] === 'Off' → 0,
-    // which matches no branch, so the well is inert). Strength is the positive
-    // magnitude; each action decides its own direction.
-    const mode = POINTER_MODES.indexOf(this.pointerState.mode);
-    this.field.uniforms.pointerMode.value = mode < 0 ? 0 : mode;
+    const action = POINTER_ACTIONS[this.pointerState.mode] ?? POINTER_ACTIONS.Off;
+    if (action.clearStrokes) {
+      this.pointer.clearStrokes();
+      this.pointerState.mode = 'Off';
+    }
+    const activeAction = POINTER_ACTIONS[this.pointerState.mode] ?? POINTER_ACTIONS.Off;
+    this.field.uniforms.pointerMode.value = activeAction.shaderMode;
     this.field.uniforms.pointerStrength.value = this.params.pointerStrength;
     this.field.uniforms.pointerRadius.value = this.params.pointerRadius;
-    // On touch devices, an active action takes over one-finger drags so they
-    // steer the well rather than orbit the camera (pinch-zoom still works).
-    this.controls.setTouchClaimsPointer(isMobileLike() && this.pointerState.mode !== 'Off');
+    this.pointer.setAction(activeAction.shaderMode, Boolean(activeAction.drawOnly));
+    // Draw actions take over dragging so strokes drive the well rather than the
+    // camera. On touch devices, hover actions also claim one-finger drags.
+    this.controls.setPointerClaimsOrbit(
+      Boolean(activeAction.drawOnly) || (isMobileLike() && this.pointerState.mode !== 'Off'),
+    );
   }
 
   private regenerate() {
