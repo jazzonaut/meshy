@@ -49,6 +49,13 @@ export function createUniforms(p: FieldParams, count: number) {
     audioActive: uniform(0),
     audioHead: uniform(0),
     spectroHeight: uniform(p.spectroHeight),
+    // Constellation lines (a viewing overlay, like the post effects — not part of
+    // FieldParams, so off by default and not round-tripped in presets/share links).
+    linkRadius: uniform(2.5),
+    lineBrightness: uniform(2.5),
+    // Global multiplier on this field's particle opacity (1 = normal). Used to
+    // cross-fade two fields against each other in the A/B blend.
+    fieldOpacity: uniform(1),
     size: uniform(p.size),
     exposure: uniform(p.exposure),
     softness: uniform(p.softness),

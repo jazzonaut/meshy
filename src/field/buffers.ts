@@ -1,5 +1,5 @@
 import { instancedArray } from 'three/tsl';
-import { BUCKET_CAP, NUM_CELLS, TRAIL_CELLS, SPECTRO_CELLS } from './config';
+import { BUCKET_CAP, NUM_CELLS, TRAIL_CELLS, SPECTRO_CELLS, LINK_DOTS } from './config';
 
 /**
  * All GPU storage buffers backing the simulation. Allocated once per field and
@@ -36,6 +36,15 @@ export function createBuffers(count: number) {
     // the CPU (mirrors the morph-target upload path); the mode reads it as a
     // scrolling 3D terrain.
     audioField: instancedArray(SPECTRO_CELLS, 'float'),
+
+    // Constellation: glowing dots interpolated along each link, rebuilt on the GPU
+    // each frame from the spatial-hash grid. Rendered as an INSTANCED sprite (one
+    // instance per dot) reading these via `.toAttribute()` — mechanically identical
+    // to the main particle field, the one GPU-driven render path proven to work
+    // here. alpha 0 hides the unused slots.
+    linkDots: instancedArray(LINK_DOTS, 'vec3'),
+    linkDotCol: instancedArray(LINK_DOTS, 'vec3'),
+    linkDotAlpha: instancedArray(LINK_DOTS, 'float'),
   };
 }
 
@@ -54,4 +63,7 @@ export function disposeBuffers(b: FieldBuffers) {
   b.trailDeposit.dispose?.();
   b.trailField.dispose?.();
   b.audioField.dispose?.();
+  b.linkDots.dispose?.();
+  b.linkDotCol.dispose?.();
+  b.linkDotAlpha.dispose?.();
 }

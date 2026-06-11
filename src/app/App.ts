@@ -8,9 +8,9 @@ import { createPostprocessing, type Postprocessing } from './Postprocessing';
 import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
 import { AudioInput } from './AudioInput';
-import { readHash, buildShareUrl, type SceneState } from './presetUrl';
+import { readHash, buildShareUrl, type SceneState, type PostState } from './presetUrl';
 import { isMobileLike } from './device';
-import { POINTER_ACTIONS, type Controller, type ViewState, type PointerState, type MorphState, type DemoState, type AudioState } from './ui/types';
+import { POINTER_ACTIONS, type Controller, type ViewState, type PointerState, type MorphState, type DemoState, type AudioState, type ConstellationState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
   '100k': 100_000,
@@ -46,12 +46,18 @@ export class App {
   private readonly morphState: MorphState;
   private readonly demo: DemoState;
   private readonly audioState: AudioState;
+  private readonly constellationState: ConstellationState;
   private readonly audio = new AudioInput();
   private demoElapsed = 0;
   // Lighter default on phone-class devices; a shared link / preset still overrides.
   private count = COUNT_OPTIONS[isMobileLike() ? '250k' : '500k'];
 
   private field: ParticleField;
+  // Second field for the A/B cross-fade overlay (created on demand).
+  private fieldB?: ParticleField;
+  private blendActive = false;
+  private blendKeyA?: string;
+  private blendKeyB?: string;
   private readonly stage = new Stage();
   private readonly controls: Controls;
   private readonly pointer: PointerTracker;
@@ -71,6 +77,7 @@ export class App {
     this.morphState = wrap<MorphState>({ shape: 'None' });
     this.demo = wrap<DemoState>({ enabled: false, interval: 6, fps: false });
     this.audioState = wrap<AudioState>({ enabled: false });
+    this.constellationState = wrap<ConstellationState>({ enabled: false, radius: 2.5, brightness: 2.5 });
 
     this.loadFromHash(); // a shared URL overrides the defaults before we build
 
@@ -93,6 +100,7 @@ export class App {
     // A shared link / preset may have restored a shape, so seed its target too.
     this.applyMorphTarget();
     this.applyMorphUniforms();
+    this.applyConstellation();
 
     this.controller = {
       params: this.params,
@@ -101,6 +109,7 @@ export class App {
       morphState: this.morphState,
       demo: this.demo,
       audioState: this.audioState,
+      constellationState: this.constellationState,
       countOptions: COUNT_OPTIONS,
       getField: () => this.field,
       renderer,
@@ -109,12 +118,19 @@ export class App {
       controls: this.controls,
       stage: this.stage,
       onCountChange: (count) => {
+        this.clearBlend();
         this.count = count;
         this.rebuild();
       },
-      onMotionPreset: (idx) => this.applyMotionPreset(idx),
+      onMotionPreset: (idx) => {
+        this.clearBlend();
+        this.applyMotionPreset(idx);
+      },
       onPointerForce: () => this.applyPointerForce(),
-      onRegenerate: () => this.regenerate(),
+      onRegenerate: () => {
+        this.clearBlend();
+        this.regenerate();
+      },
       onShare: () => this.share(),
       onDemoToggle: (on) => {
         this.demo.enabled = on;
@@ -122,6 +138,7 @@ export class App {
       },
       onStatsToggle: (on) => this.stats.setVisible(on),
       onAudioToggle: (on) => this.toggleAudio(on),
+      onConstellation: () => this.applyConstellation(),
       onMorphShape: (shape) => {
         this.morphState.shape = shape;
         this.applyMorphTarget();
@@ -129,7 +146,11 @@ export class App {
       },
       onMorphParam: () => this.applyMorphUniforms(),
       snapshot: () => this.snapshot(),
-      applyPreset: (state) => this.applyPreset(state),
+      applyPreset: (state) => {
+        this.clearBlend();
+        this.applyPreset(state);
+      },
+      onBlendFields: (a, b, t) => this.setBlend(a, b, t),
     };
 
     // Reflect any hash-loaded state onto the engine bits that read it once.
@@ -200,7 +221,10 @@ export class App {
     // identical buffers, so skip the GPU compute entirely and just re-present.
     // Interactive edits (colour, material, mode) recolour via their own paths, and
     // the camera can still orbit because render/controls run regardless.
-    if (this.params.speed > 0) this.field.update(delta);
+    if (this.params.speed > 0) {
+      this.field.update(delta);
+      this.fieldB?.update(delta); // A/B overlay advances with its own baked speed
+    }
     this.controls.update();
     this.post.render();
     this.capture.afterRender();
@@ -249,6 +273,73 @@ export class App {
     u.coreGlow.value = this.params.coreGlow;
   }
 
+  /** Push the constellation overlay state onto the field (params before toggle so
+   *  the on-enable build uses the right radius). */
+  private applyConstellation() {
+    const s = this.constellationState;
+    this.field.setLinkParams(s.radius, s.brightness);
+    this.field.setConstellation(s.enabled);
+  }
+
+  /**
+   * A/B cross-fade. Configures the main field as preset A and a second field
+   * (created on demand) as preset B, then fades between them by `t` (0 = all A,
+   * 1 = all B) via per-field opacity. Re-configures a side only when that preset
+   * actually changes, so dragging the slider is just two opacity writes.
+   */
+  private setBlend(a: SceneState, b: SceneState, t: number) {
+    const ka = JSON.stringify(a);
+    const kb = JSON.stringify(b);
+    if (!this.blendActive || ka !== this.blendKeyA) {
+      this.applyPreset(a); // main field becomes preset A
+      this.blendKeyA = ka;
+    }
+    if (!this.blendActive || kb !== this.blendKeyB || !this.fieldB) {
+      this.rebuildFieldB(b);
+      this.blendKeyB = kb;
+    }
+    this.blendActive = true;
+    const tt = Math.max(0, Math.min(1, t));
+    this.field.setOpacity(1 - tt);
+    this.fieldB?.setOpacity(tt);
+  }
+
+  /** Build (or rebuild) the overlay field for preset B. */
+  private rebuildFieldB(state: SceneState) {
+    if (this.fieldB) {
+      this.stage.scene.remove(this.fieldB.object);
+      this.fieldB.dispose();
+    }
+    const params = { ...DEFAULT_PARAMS, ...state.params };
+    const count = typeof state.count === 'number' ? state.count : this.count;
+    const fb = new ParticleField(this.renderer, count, params);
+    fb.setMaterialStyle(params.materialStyle);
+    fb.seed(); // structure + colour from B's params
+    if (state.morphShape && state.morphShape !== 'None') {
+      const data = generateMorphTarget(state.morphShape, count, params.radius);
+      if (data) fb.setMorphTarget(data);
+      fb.uniforms.morphAmount.value = params.morphAmount;
+    } else {
+      fb.uniforms.morphAmount.value = 0;
+    }
+    this.stage.scene.add(fb.object);
+    this.fieldB = fb;
+  }
+
+  /** Tear down the A/B overlay and restore the main field to full opacity. */
+  private clearBlend() {
+    if (!this.blendActive) return;
+    this.blendActive = false;
+    this.blendKeyA = undefined;
+    this.blendKeyB = undefined;
+    this.field.setOpacity(1);
+    if (this.fieldB) {
+      this.stage.scene.remove(this.fieldB.object);
+      this.fieldB.dispose();
+      this.fieldB = undefined;
+    }
+  }
+
   /** Enable/disable the mic. Returns whether audio is live afterward. */
   private async toggleAudio(on: boolean): Promise<boolean> {
     if (on) {
@@ -278,6 +369,7 @@ export class App {
     this.applyPointerForce(); // re-apply onto the new field's uniforms
     this.applyMorphTarget(); // the new field's targets buffer starts empty
     this.applyMorphUniforms();
+    this.applyConstellation(); // re-apply onto the freshly built field
     if (this.post.dofBokeh.value > 0) this.field.setDepthWrite(true); // DoF still on
   }
 
@@ -359,7 +451,43 @@ export class App {
       count: this.count,
       pointerMode: this.pointerState.mode,
       morphShape: this.morphState.shape,
+      post: this.capturePost(),
     };
+  }
+
+  /** Capture the postprocessing look (bloom/lens/tone) for a snapshot. */
+  private capturePost(): PostState {
+    const p = this.post;
+    return {
+      bloomStrength: p.bloomPass.strength.value,
+      bloomRadius: p.bloomPass.radius.value,
+      bloomThreshold: p.bloomPass.threshold.value,
+      trails: p.trailDamp.value,
+      dofBokeh: p.dofBokeh.value,
+      dofFocus: p.dofFocus.value,
+      dofRange: p.dofRange.value,
+      ca: p.caStrength.value,
+      vignette: p.vignette.value,
+      dither: p.ditherAmt.value,
+      toneExposure: this.renderer.toneMappingExposure,
+    };
+  }
+
+  /** Apply a postprocessing snapshot. The layer toggles (trails/DoF/CA) only rebuild
+   *  the graph when they cross their on/off threshold, so this is cheap mid-blend. */
+  private applyPost(s: PostState) {
+    const p = this.post;
+    p.bloomPass.strength.value = s.bloomStrength;
+    p.bloomPass.radius.value = s.bloomRadius;
+    p.bloomPass.threshold.value = s.bloomThreshold;
+    p.dofFocus.value = s.dofFocus;
+    p.dofRange.value = s.dofRange;
+    p.vignette.value = s.vignette;
+    p.ditherAmt.value = s.dither;
+    this.renderer.toneMappingExposure = s.toneExposure;
+    p.setTrails(s.trails);
+    p.setDofBokeh(s.dofBokeh);
+    p.setCa(s.ca);
   }
 
   /**
@@ -380,6 +508,7 @@ export class App {
     if (state.params) Object.assign(this.params, state.params);
     this.pointerState.mode = state.pointerMode;
     this.morphState.shape = state.morphShape ?? 'None';
+    if (state.post) this.applyPost(state.post); // bloom/lens/tone — independent of the field
 
     const countChanged = typeof state.count === 'number' && state.count !== this.count;
     if (typeof state.count === 'number') this.count = state.count;

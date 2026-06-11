@@ -1,7 +1,15 @@
+import * as THREE from 'three/webgpu';
 import { reactive } from 'vue';
 import { App } from './app/App';
 import { mountUi } from './app/ui/vue/mountUi';
 import './styles/app.css';
+
+// Debug aid (dev only): make TSL code-gen errors name the exact node/line instead of
+// "stack trace not available". Set at module load so it's active before any node.
+if (import.meta.env.DEV) {
+  const NodeClass = (THREE as unknown as { Node?: { captureStackTrace?: boolean } }).Node;
+  if (NodeClass) NodeClass.captureStackTrace = true;
+}
 
 function registerServiceWorker() {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;

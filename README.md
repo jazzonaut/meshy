@@ -149,7 +149,9 @@ The UI is split across two tiers so it isn't a wall of sliders:
   mobile) holding an `Accordion` of tuning panels: **View** (auto-rotate, axes,
   gizmo), **Motion** (force tuning), **GPU flock params**, **Pointer**
   (strength/radius), **Slime Mold**, **Audio / Mic** (reactivity, input gain,
-  waterfall height), **Morph** (shape + amount), **Look**
+  waterfall height), **Constellation lines** (glowing links between nearby
+  particles, any mode), **A/B Blend** (slide live between two saved presets),
+  **Morph** (shape + amount), **Look**
   (material, size, colours), **Bloom / Tone** (incl. trails), **Capture**
   (PNG/webm), **Demo reel** (auto demo-reel, FPS), **Structure** (regenerate).
   Panels are an accordion (one open at a time) and the GPU-flock / Slime tuning

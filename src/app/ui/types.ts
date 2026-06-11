@@ -77,6 +77,11 @@ export interface AudioState {
   /** Whether the mic is live (permission granted and analysing). */
   enabled: boolean;
 }
+export interface ConstellationState {
+  enabled: boolean;
+  radius: number; // link search radius
+  brightness: number; // line glow brightness
+}
 
 /**
  * The seam between the vanilla engine and the Vue UI. {@link App} builds this and
@@ -92,6 +97,7 @@ export interface Controller {
   morphState: MorphState;
   demo: DemoState;
   audioState: AudioState;
+  constellationState: ConstellationState;
   countOptions: Record<string, number>;
   getField: () => ParticleField;
   renderer: THREE.WebGPURenderer;
@@ -110,10 +116,18 @@ export interface Controller {
   /** Enable/disable the microphone. Resolves true if audio is live afterward
    *  (turning on can fail if the user denies the permission). */
   onAudioToggle: (on: boolean) => Promise<boolean>;
+  /** Re-apply the constellation overlay state (toggle + radius/brightness). */
+  onConstellation: () => void;
   onMorphShape: (shape: MorphShape) => void;
   onMorphParam: () => void;
   /** Capture the current look as a portable scene state (for saving a preset). */
   snapshot: () => SceneState;
   /** Apply a saved scene state, rebuilding the field so every param takes effect. */
   applyPreset: (state: SceneState) => void;
+  /**
+   * A/B cross-fade: show presets `a` and `b` as two overlapping particle fields,
+   * fading from a (t=0) to b (t=1). Unlike a param lerp, this blends EVERYTHING —
+   * motion mode, colours, structure — because both presets run live at once.
+   */
+  onBlendFields: (a: SceneState, b: SceneState, t: number) => void;
 }

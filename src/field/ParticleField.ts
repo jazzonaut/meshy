@@ -10,6 +10,8 @@ import { createPerParticleKernel } from './kernels/perParticle';
 import { createFlockKernels } from './kernels/flock';
 import { createSlimeKernels } from './kernels/slime';
 import { createSpectrogramKernel } from './kernels/spectrogram';
+import { createConstellationKernel } from './kernels/constellation';
+import { createConstellationDots } from './lines';
 import { createParticleMaterial, type BlendMode } from './material';
 
 /**
@@ -30,6 +32,11 @@ export class ParticleField {
   private readonly setBlendModeImpl: (mode: BlendMode) => void;
   private readonly setDepthWriteImpl: (on: boolean) => void;
 
+  // Constellation overlay (off by default): an instanced sprite of link dots.
+  private readonly linkObject: THREE.Sprite;
+  private readonly linkMaterial: THREE.SpriteNodeMaterial;
+  private linksOn = false;
+
   // Init + colour kernels are cheap to build and needed for every seed/recolour,
   // so they're eager. The four heavy motion-kernel graphs (classic / experimental /
   // flock / slime) are built lazily on first use — at boot only the *active* mode's
@@ -43,6 +50,7 @@ export class ParticleField {
   private _kFlock?: ReturnType<typeof createFlockKernels>;
   private _kSlime?: ReturnType<typeof createSlimeKernels>;
   private _kSpectro?: ReturnType<typeof createSpectrogramKernel>;
+  private _kConstellation?: ReturnType<typeof createConstellationKernel>;
 
   private speed: number;
   private simTime = 0;
@@ -72,7 +80,17 @@ export class ParticleField {
     const sprites = new THREE.Sprite(this.material);
     (sprites as any).count = count;
     sprites.frustumCulled = false;
-    this.object = sprites;
+
+    // The particle sprites and the (optional) constellation dots share one parent
+    // so the gizmo/controls transform them together; both read the same buffers.
+    const dots = createConstellationDots(this.ctx);
+    this.linkObject = dots.object;
+    this.linkMaterial = dots.material;
+
+    const group = new THREE.Group();
+    group.add(sprites);
+    group.add(this.linkObject);
+    this.object = group;
 
     // No GPU work here: seeding is deferred to warmup()/seed() so the cold-start
     // shader compile happens off the constructor's synchronous critical path.
@@ -93,6 +111,9 @@ export class ParticleField {
   }
   private get kSpectro() {
     return (this._kSpectro ??= createSpectrogramKernel(this.ctx, this.count));
+  }
+  private get kConstellation() {
+    return (this._kConstellation ??= createConstellationKernel(this.ctx));
   }
 
   /**
@@ -189,6 +210,7 @@ export class ParticleField {
       this.renderer.compute(this.kPerParticle);
     }
     this.renderer.compute(this.kColor);
+    if (this.linksOn) this.buildLinks();
   }
 
   /** Switch the active motion mode and recolour for it. */
@@ -218,6 +240,11 @@ export class ParticleField {
   /** Global multiplier on simulation speed (0 = paused). */
   setSpeed(v: number) {
     this.speed = v;
+  }
+
+  /** Fade the whole field's particles (0 = invisible). For A/B cross-fading. */
+  setOpacity(o: number) {
+    this.uniforms.fieldOpacity.value = o;
   }
 
   /**
@@ -253,8 +280,38 @@ export class ParticleField {
     this.uniforms.audioActive.value = on ? 1 : 0;
   }
 
+  /** Show/hide the constellation overlay. Builds the topology once on enable so it
+   *  appears immediately (even while paused) and warms the kernel. */
+  setConstellation(on: boolean) {
+    this.linksOn = on;
+    this.linkObject.visible = on;
+    if (on) this.buildLinks();
+  }
+
+  /** Link search radius (clamped to the grid cell in-shader) + line brightness. */
+  setLinkParams(radius: number, brightness: number) {
+    this.uniforms.linkRadius.value = radius;
+    this.uniforms.lineBrightness.value = brightness;
+  }
+
+  /**
+   * Recompute the constellation topology. Ensures the spatial-hash grid is populated:
+   * the flock modes already rebuild it each frame, so reuse it then; otherwise run a
+   * clear + populate first (the grid is otherwise idle in those modes).
+   */
+  private buildLinks() {
+    const motion = this.uniforms.motion.value;
+    const flockGridReady = motion >= FIRST_GPU_MODE && motion !== SLIME_MODE && motion !== SPECTRO_MODE;
+    if (!flockGridReady) {
+      this.renderer.compute(this.kFlock.gridClear);
+      this.renderer.compute(this.kFlock.gridPopulate);
+    }
+    this.renderer.compute(this.kConstellation);
+  }
+
   dispose() {
     this.material.dispose();
+    this.linkMaterial.dispose();
     disposeBuffers(this.buffers);
   }
 }

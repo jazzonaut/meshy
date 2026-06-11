@@ -13,6 +13,7 @@ import { useToast } from 'primevue/usetoast';
 import SliderRow from './SliderRow.vue';
 import ColorRow from './ColorRow.vue';
 import ToggleRow from './ToggleRow.vue';
+import AbBlend from './AbBlend.vue';
 import { MATERIAL_STYLES, MORPH_SHAPES, FIRST_GPU_MODE, CRYSTAL_MODE, SLIME_MODE } from '../../../field';
 import { useController } from './useController';
 
@@ -88,7 +89,7 @@ function setPerception(v: number) {
     position="right"
     header="Studio"
     :modal="false"
-    :dismissable-mask="false"
+    :dismissable="false"
     class="!w-[330px] !max-w-[90vw]"
   >
     <Accordion>
@@ -205,6 +206,28 @@ function setPerception(v: number) {
           <SliderRow label="reactivity (any preset)" :min="0" :max="1" :step="0.01" v-model="p.audioReactivity" />
           <SliderRow label="input gain" :min="0.2" :max="4" :step="0.05" v-model="p.audioGain" />
           <SliderRow label="waterfall height" :min="0" :max="2" :step="0.01" v-model="p.spectroHeight" @input="(v) => (f().uniforms.spectroHeight.value = v)" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- Constellation lines ---------------------------------------------- -->
+      <AccordionPanel value="constellation">
+        <AccordionHeader>Constellation lines</AccordionHeader>
+        <AccordionContent>
+          <p class="pb-1 text-[11px] leading-snug text-surface-500">
+            Glowing links between nearby particles, in any mode. Sparse by design —
+            densest at lower particle counts. The link radius is capped to the grid cell.
+          </p>
+          <ToggleRow label="show links" v-model="c.constellationState.enabled" @change="() => c.onConstellation()" />
+          <SliderRow label="link radius" :min="0.5" :max="6" :step="0.05" v-model="c.constellationState.radius" @input="() => c.onConstellation()" />
+          <SliderRow label="brightness" :min="0" :max="8" :step="0.05" v-model="c.constellationState.brightness" @input="() => c.onConstellation()" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- A/B preset blend ------------------------------------------------- -->
+      <AccordionPanel value="abblend">
+        <AccordionHeader>A/B Blend</AccordionHeader>
+        <AccordionContent>
+          <AbBlend />
         </AccordionContent>
       </AccordionPanel>
 

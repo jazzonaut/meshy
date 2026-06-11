@@ -7,6 +7,10 @@ import { isMobileLike } from './device';
  * instead of clipping to flat white; it is applied at the postprocessing output.
  */
 export async function createRenderer(container: HTMLElement): Promise<THREE.WebGPURenderer> {
+  // In dev, make TSL code-gen errors point at the exact node that produced them.
+  const NodeClass = (THREE as unknown as { Node?: { captureStackTrace?: boolean } }).Node;
+  if (import.meta.env.DEV && NodeClass) NodeClass.captureStackTrace = true;
+
   const renderer = new THREE.WebGPURenderer({ antialias: true });
   // The full-screen bloom + afterImage passes scale with pixel count, so cap the
   // ratio harder on phones (where dpr is often 3) to keep the fill cost sane.

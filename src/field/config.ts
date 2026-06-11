@@ -174,6 +174,20 @@ export const SPECTRO_D = 96;
 export const SPECTRO_CELLS = SPECTRO_W * SPECTRO_D;
 
 /**
+ * Constellation lines. The first LINK_NODES particles each emit up to MAX_LINKS
+ * segments to nearby higher-indexed particles (found via the shared spatial-hash
+ * grid). Segments are stored as particle-index pairs in a uint buffer (LINK_VERTS =
+ * 2 verts per segment) and rendered as GL line segments whose vertex positions are
+ * pulled live from the position buffer — so the web flexes with the motion for
+ * free, and only the topology is recomputed per frame. Kept to a sparse subset so
+ * the result reads as a constellation overlay rather than a solid mesh.
+ */
+export const LINK_NODES = 6000; // particles that emit links (a sparse subset)
+export const MAX_LINKS = 2; // links per node
+export const DOTS_PER = 12; // glowing dots interpolated along each link
+export const LINK_DOTS = LINK_NODES * MAX_LINKS * DOTS_PER;
+
+/**
  * Tunable parameters for the field. Anything used inside the init pass (structure
  * / colour) takes effect after calling `regenerate()`. Anything used inside the
  * update passes (motion) takes effect immediately on the next frame.

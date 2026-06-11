@@ -76,7 +76,7 @@ export function createParticleMaterial({ u, buffers }: FieldContext, initialStyl
 
   // Soft radial opacity: pow falloff turns the hard sprite disc into a soft mote.
   // softness ~0.5 = broad haze, ~3 = tight pinprick.
-  const alpha = max(float(1).sub(r2), 0.0).pow(u.softness);
+  const alpha = max(float(1).sub(r2), 0.0).pow(u.softness).mul(u.fieldOpacity);
 
   // Velocity streaking: orient the sprite along its screen-space velocity and
   // stretch it. Project world velocity into the camera's view plane, take its
