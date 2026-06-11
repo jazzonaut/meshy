@@ -89,12 +89,15 @@ Vue's `reactive` as the state wrapper so the UI tracks engine-side changes
 
 `ParticleField.update()` picks a pipeline from the active motion mode:
 
-- **Modes 0–14** — one `perParticle` compute pass (force field) + colour.
-- **Modes 15–18** — the flock pipeline: clear → populate the spatial-hash grid →
-  per-mode neighbour force → integrate, + colour. Positions are read-only until the
-  integrate pass, so the 3×3×3 neighbour gather sees a consistent snapshot.
-- **Mode 19** — the slime pipeline: deposit trail → diffuse/decay the 3D field →
+- **Force-field / path modes** — one `perParticle` compute pass (force field) + colour.
+- **Flock modes (Boids / Predator / Droplets / Crystallize)** — the flock pipeline:
+  clear → populate the spatial-hash grid → per-mode neighbour force → integrate, +
+  colour. Positions are read-only until the integrate pass, so the 3×3×3 neighbour
+  gather sees a consistent snapshot.
+- **Slime Mold** — the slime pipeline: deposit trail → diffuse/decay the 3D field →
   sense the gradient & crawl, + colour.
+- **Spectrogram Waterfall** — a single pass that eases every particle onto a 3D FFT
+  terrain read from the microphone's amplitude-history ring buffer, + colour.
 
 Postprocessing then renders the scene into an HDR target, applies trails and bloom,
 and tone-maps the result.
@@ -122,18 +125,31 @@ Time Loom, Storm Glyphs.
 The GPU modes are smoothest at **≤250k particles** (switch the count in the View
 folder if it stutters); the slime diffuse pass is fixed-cost regardless of count.
 
+**Audio:**
+
+- **Spectrogram Waterfall** — a microphone-driven 3D FFT terrain: frequency runs
+  across one axis, time scrolls away from the camera, and amplitude is the height.
+  Enable the mic (🎤 button) to drive it; until then it shows a gentle idle ripple.
+
+Beyond the dedicated mode, the **🎤 Mic** toggle turns on an audio-reactive overlay
+that modulates **any** preset/mode — sound pumps particle size, exposure, flow and
+core glow. The mic captures ambient sound (your voice, music played out loud), needs
+permission, and on mobile must be started with a tap. It does not tap the device's
+own audio playback.
+
 ## Controls
 
 The UI is split across two tiers so it isn't a wall of sliders:
 
 - **Control cluster** (top-left) — the handful of things you reach for constantly:
   a **mode dropdown** (a searchable list that stays open until you collapse it —
-  on mobile it closes after a pick), **particle count**, the **off/push/pull**
-  pointer toggle, a **Share** button, and the **Studio** toggle.
+  on mobile it closes after a pick), the cursor **action** dropdown, the preset bar,
+  a **🎤 Mic** toggle (audio reactivity), a **Share** button, and the **Studio** toggle.
 - **Studio drawer** — a PrimeVue `Drawer` (right on desktop, near-full-width on
   mobile) holding an `Accordion` of tuning panels: **View** (auto-rotate, axes,
   gizmo), **Motion** (force tuning), **GPU flock params**, **Pointer**
-  (strength/radius), **Slime Mold**, **Morph** (shape + amount), **Look**
+  (strength/radius), **Slime Mold**, **Audio / Mic** (reactivity, input gain,
+  waterfall height), **Morph** (shape + amount), **Look**
   (material, size, colours), **Bloom / Tone** (incl. trails), **Capture**
   (PNG/webm), **Demo reel** (auto demo-reel, FPS), **Structure** (regenerate).
   Panels are an accordion (one open at a time) and the GPU-flock / Slime tuning

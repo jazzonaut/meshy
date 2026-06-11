@@ -46,6 +46,15 @@ async function share() {
     toast.add({ severity: 'warn', summary: 'Copy failed', detail: 'Could not access the clipboard.', life: 2500 });
   }
 }
+async function toggleMic() {
+  const turningOn = !c.audioState.enabled;
+  const ok = await c.onAudioToggle(turningOn);
+  if (turningOn && !ok) {
+    toast.add({ severity: 'warn', summary: 'Microphone blocked', detail: 'Allow mic access to react to sound.', life: 2800 });
+  } else if (turningOn && ok) {
+    toast.add({ severity: 'success', summary: 'Mic live', detail: 'The field now reacts to sound. Try the Spectrogram Waterfall mode.', life: 2600 });
+  }
+}
 
 onMounted(() => document.addEventListener('fullscreenchange', syncFullscreen));
 onUnmounted(() => document.removeEventListener('fullscreenchange', syncFullscreen));
@@ -85,6 +94,14 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', syncFullscree
 
     <div class="flex flex-wrap items-center gap-1.5">
       <PresetBar />
+      <Button
+        :label="c.audioState.enabled ? '🎤 On' : '🎤 Mic'"
+        size="small"
+        :severity="c.audioState.enabled ? 'success' : 'secondary'"
+        :text="!c.audioState.enabled"
+        :title="c.audioState.enabled ? 'Microphone live — tap to stop' : 'React to sound from the microphone'"
+        @click="toggleMic"
+      />
       <Button label="Share" size="small" severity="secondary" text @click="share" />
       <Button label="Studio" size="small" severity="secondary" @click="studioOpen = true" />
     </div>

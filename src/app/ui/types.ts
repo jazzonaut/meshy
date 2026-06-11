@@ -73,6 +73,10 @@ export interface DemoState {
   interval: number;
   fps: boolean;
 }
+export interface AudioState {
+  /** Whether the mic is live (permission granted and analysing). */
+  enabled: boolean;
+}
 
 /**
  * The seam between the vanilla engine and the Vue UI. {@link App} builds this and
@@ -87,6 +91,7 @@ export interface Controller {
   pointerState: PointerState;
   morphState: MorphState;
   demo: DemoState;
+  audioState: AudioState;
   countOptions: Record<string, number>;
   getField: () => ParticleField;
   renderer: THREE.WebGPURenderer;
@@ -102,6 +107,9 @@ export interface Controller {
   onShare: () => Promise<boolean>;
   onDemoToggle: (on: boolean) => void;
   onStatsToggle: (on: boolean) => void;
+  /** Enable/disable the microphone. Resolves true if audio is live afterward
+   *  (turning on can fail if the user denies the permission). */
+  onAudioToggle: (on: boolean) => Promise<boolean>;
   onMorphShape: (shape: MorphShape) => void;
   onMorphParam: () => void;
   /** Capture the current look as a portable scene state (for saving a preset). */

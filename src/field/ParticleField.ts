@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { instanceIndex } from 'three/tsl';
-import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, type FieldParams } from './config';
+import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, SPECTRO_MODE, SPECTRO_W, SPECTRO_D, SPECTRO_CELLS, type FieldParams } from './config';
 import { createUniforms, type FieldUniforms } from './uniforms';
 import { createBuffers, disposeBuffers, type FieldBuffers } from './buffers';
 import { createContext } from './context';
@@ -9,6 +9,7 @@ import { createColorKernel } from './kernels/color';
 import { createPerParticleKernel } from './kernels/perParticle';
 import { createFlockKernels } from './kernels/flock';
 import { createSlimeKernels } from './kernels/slime';
+import { createSpectrogramKernel } from './kernels/spectrogram';
 import { createParticleMaterial, type BlendMode } from './material';
 
 /**
@@ -41,10 +42,14 @@ export class ParticleField {
   private _kExperimental?: ReturnType<typeof createPerParticleKernel>;
   private _kFlock?: ReturnType<typeof createFlockKernels>;
   private _kSlime?: ReturnType<typeof createSlimeKernels>;
+  private _kSpectro?: ReturnType<typeof createSpectrogramKernel>;
 
   private speed: number;
   private simTime = 0;
   private seeded = false;
+  // CPU mirror of the audio ring buffer + its newest-row pointer (Spectrogram mode).
+  private readonly audioHistory = new Float32Array(SPECTRO_CELLS);
+  private audioHead = 0;
 
   constructor(renderer: THREE.WebGPURenderer, count: number, params: FieldParams) {
     this.renderer = renderer;
@@ -86,6 +91,9 @@ export class ParticleField {
   private get kSlime() {
     return (this._kSlime ??= createSlimeKernels(this.ctx, this.count));
   }
+  private get kSpectro() {
+    return (this._kSpectro ??= createSpectrogramKernel(this.ctx, this.count));
+  }
 
   /**
    * Seed particle structure asynchronously. Uses {@link THREE.WebGPURenderer#computeAsync}
@@ -107,7 +115,9 @@ export class ParticleField {
   async warmupMotion() {
     const c = this.renderer;
     const motion = this.uniforms.motion.value;
-    if (motion === SLIME_MODE) {
+    if (motion === SPECTRO_MODE) {
+      await c.computeAsync(this.kSpectro);
+    } else if (motion === SLIME_MODE) {
       await c.computeAsync(this.kSlime.deposit);
       await c.computeAsync(this.kSlime.diffuse);
       await c.computeAsync(this.kSlime.move);
@@ -159,7 +169,10 @@ export class ParticleField {
     this.uniforms.time.value = this.simTime;
 
     const motion = this.uniforms.motion.value;
-    if (motion === SLIME_MODE) {
+    if (motion === SPECTRO_MODE) {
+      // Spectrogram Waterfall: ease particles onto the live FFT terrain.
+      this.renderer.compute(this.kSpectro);
+    } else if (motion === SLIME_MODE) {
       // Physarum: deposit trail → diffuse/decay the field → sense & crawl.
       this.renderer.compute(this.kSlime.deposit);
       this.renderer.compute(this.kSlime.diffuse);
@@ -216,6 +229,28 @@ export class ParticleField {
     const attr = this.buffers.targets.value as any;
     attr.array.set(data.subarray(0, attr.array.length));
     attr.needsUpdate = true;
+  }
+
+  /**
+   * Push one fresh FFT row (length ≥ SPECTRO_W, normalised 0..1) into the audio
+   * ring buffer for the Spectrogram Waterfall mode, advance the ring head, and
+   * re-upload. Marks audio active so the waterfall shows live amplitude instead of
+   * the idle ripple. Same cheap upload path as {@link setMorphTarget}.
+   */
+  pushAudioRow(spectrum: Float32Array) {
+    const row = this.audioHead;
+    this.audioHistory.set(spectrum.subarray(0, SPECTRO_W), row * SPECTRO_W);
+    this.uniforms.audioHead.value = row;
+    this.uniforms.audioActive.value = 1;
+    const attr = this.buffers.audioField.value as any;
+    attr.array.set(this.audioHistory);
+    attr.needsUpdate = true;
+    this.audioHead = (row + 1) % SPECTRO_D;
+  }
+
+  /** Gate the waterfall between live mic amplitude (true) and the idle ripple. */
+  setAudioActive(on: boolean) {
+    this.uniforms.audioActive.value = on ? 1 : 0;
   }
 
   dispose() {

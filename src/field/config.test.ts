@@ -10,6 +10,7 @@ import {
   DROPLET_MODE,
   CRYSTAL_MODE,
   SLIME_MODE,
+  SPECTRO_MODE,
   FIRST_EXPERIMENTAL_MODE,
   LAST_EXPERIMENTAL_MODE,
   FIRST_GPU_MODE,
@@ -74,11 +75,14 @@ describe('mode-index constants', () => {
     expect(MOTION_MODES.slice(FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE)).toHaveLength(15);
   });
 
-  it('routes only Slime past the flock range (Slime is the last GPU mode)', () => {
-    // App.update() checks `=== SLIME_MODE` before `>= FIRST_GPU_MODE`, so Slime
-    // must remain a distinct top index for that ordering to stay correct.
-    expect(SLIME_MODE).toBe(MOTION_MODES.length - 1);
+  it('keeps Slime + Spectrogram special-cased past the flock range', () => {
+    // ParticleField.update() checks `=== SPECTRO_MODE` and `=== SLIME_MODE` before
+    // the `>= FIRST_GPU_MODE` flock branch, so both must sit above the flock range
+    // (which ends at Crystallize) for that routing to stay correct.
     expect(SLIME_MODE).toBeGreaterThan(CRYSTAL_MODE);
+    expect(SPECTRO_MODE).toBeGreaterThan(CRYSTAL_MODE);
+    expect(SPECTRO_MODE).toBe(MOTION_MODES.length - 1); // Spectrogram is the last mode
+    expect(SPECTRO_MODE).not.toBe(SLIME_MODE);
   });
 });
 

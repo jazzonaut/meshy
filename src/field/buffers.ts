@@ -1,5 +1,5 @@
 import { instancedArray } from 'three/tsl';
-import { BUCKET_CAP, NUM_CELLS, TRAIL_CELLS } from './config';
+import { BUCKET_CAP, NUM_CELLS, TRAIL_CELLS, SPECTRO_CELLS } from './config';
 
 /**
  * All GPU storage buffers backing the simulation. Allocated once per field and
@@ -30,6 +30,12 @@ export function createBuffers(count: number) {
     // chemoattractant agents sense and steer up.
     trailDeposit: instancedArray(TRAIL_CELLS, 'uint').toAtomic(),
     trailField: instancedArray(TRAIL_CELLS, 'float'),
+
+    // Spectrogram amplitude history (Spectrogram Waterfall mode). A ring of
+    // SPECTRO_D rows × SPECTRO_W columns, written one fresh FFT row per frame from
+    // the CPU (mirrors the morph-target upload path); the mode reads it as a
+    // scrolling 3D terrain.
+    audioField: instancedArray(SPECTRO_CELLS, 'float'),
   };
 }
 
@@ -47,4 +53,5 @@ export function disposeBuffers(b: FieldBuffers) {
   b.cellTable.dispose?.();
   b.trailDeposit.dispose?.();
   b.trailField.dispose?.();
+  b.audioField.dispose?.();
 }

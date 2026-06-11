@@ -37,6 +37,7 @@ export const MOTION_MODES = [
   'Liquid Droplets (GPU)',
   'Crystallize (GPU)',
   'Slime Mold (GPU)',
+  'Spectrogram Waterfall',
 ] as const;
 
 export type MotionMode = (typeof MOTION_MODES)[number];
@@ -97,6 +98,10 @@ export const MOTION_GROUPS: readonly MotionGroup[] = [
       'Slime Mold (GPU)',
     ],
   },
+  {
+    label: 'Audio',
+    modes: ['Spectrogram Waterfall'],
+  },
 ] as const;
 
 /** Render material styles — index matches the `materialStyle` uniform. */
@@ -126,6 +131,13 @@ export const PREDATOR_MODE = MOTION_MODES.indexOf('Predator Scatter (GPU)');
 export const DROPLET_MODE = MOTION_MODES.indexOf('Liquid Droplets (GPU)');
 export const CRYSTAL_MODE = MOTION_MODES.indexOf('Crystallize (GPU)');
 export const SLIME_MODE = MOTION_MODES.indexOf('Slime Mold (GPU)');
+/**
+ * Spectrogram Waterfall — a microphone-driven 3D FFT terrain. Like Slime, it's
+ * special-cased in the update routing (checked before the `>= FIRST_GPU_MODE`
+ * flock range) since it has its own single-pass kernel and reads the audio buffer
+ * rather than the hash grid.
+ */
+export const SPECTRO_MODE = MOTION_MODES.indexOf('Spectrogram Waterfall');
 export const FIRST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Lorenz Drift');
 export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Thomas Tangle');
 /** Modes at or beyond this index use a GPU multi-pass pipeline. */
@@ -149,6 +161,17 @@ export const TRAIL_CELLS = TRAIL_RES * TRAIL_RES * TRAIL_RES;
 // Fixed-point scale: trail is deposited into an atomic uint buffer (WGSL atomics
 // are integer-only), then read back as float / TRAIL_FIXED.
 export const TRAIL_FIXED = 256.0;
+
+/**
+ * Spectrogram Waterfall grid. SPECTRO_W frequency columns × SPECTRO_D time rows of
+ * amplitude history live in one storage buffer (a ring, newest row at the head);
+ * the mode maps every particle to a cell (many particles per cell when the count
+ * exceeds the grid) so the terrain reads dense. The CPU mirrors this buffer and
+ * uploads one fresh FFT row per frame — the same cheap upload path morph targets use.
+ */
+export const SPECTRO_W = 128;
+export const SPECTRO_D = 96;
+export const SPECTRO_CELLS = SPECTRO_W * SPECTRO_D;
 
 /**
  * Tunable parameters for the field. Anything used inside the init pass (structure
@@ -183,6 +206,13 @@ export interface FieldParams {
   // Morph (live) — pull particles toward a sampled shape / text in any mode
   morphAmount: number; // 0 = free nebula, 1 = fully formed shape
   morphStrength: number; // spring stiffness toward the target point
+  // Audio (live) — microphone reactivity. audioReactivity modulates any preset's
+  // look; audioGain scales the mic input; spectroHeight is the Spectrogram
+  // Waterfall mode's vertical amplitude. The mic is enabled separately (a runtime
+  // permission), so these are pure tuning values safe to round-trip in presets.
+  audioReactivity: number; // 0 = off, 1 = strong modulation of size/flow/exposure
+  audioGain: number; // input sensitivity multiplier on the mic level
+  spectroHeight: number; // waterfall vertical scale (Spectrogram Waterfall mode)
   // Look (live)
   size: number;
   exposure: number;
@@ -225,6 +255,9 @@ export const DEFAULT_PARAMS: FieldParams = {
   slimeDecay: 0.9,
   morphAmount: 1,
   morphStrength: 12,
+  audioReactivity: 0.6,
+  audioGain: 1.0,
+  spectroHeight: 0.9,
   size: 0.06,
   exposure: 1,
   softness: 1.4,
@@ -282,4 +315,8 @@ export const MOTION_PRESETS: MotionPreset[] = [
   // Slime Mold: moderate speed; flowScale/timeSpeed drive the wander curl; spring
   // is boundary containment; damping is drag. flowStrength unused (slimeWander instead).
   { speed: 1.6, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.05, spring: 1.2, damping: 0.9 },
+  // Spectrogram Waterfall: speed scales how fast particles ease onto the terrain;
+  // timeSpeed drives the gentle idle ripple shown before the mic is enabled.
+  // flow/spring/damping are unused by this mode but kept finite for the seam test.
+  { speed: 4.0, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.08, spring: 0.0, damping: 0.9 },
 ];

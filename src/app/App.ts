@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, type FieldParams, type MorphShape } from '../field';
+import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, SPECTRO_MODE, type FieldParams, type MorphShape } from '../field';
 import { createRenderer } from './createRenderer';
 import { Stage } from './Stage';
 import { Controls } from './Controls';
@@ -7,9 +7,10 @@ import { PointerTracker } from './PointerTracker';
 import { createPostprocessing, type Postprocessing } from './Postprocessing';
 import { Capture } from './Capture';
 import { StatsOverlay } from './StatsOverlay';
+import { AudioInput } from './AudioInput';
 import { readHash, buildShareUrl, type SceneState } from './presetUrl';
 import { isMobileLike } from './device';
-import { POINTER_ACTIONS, type Controller, type ViewState, type PointerState, type MorphState, type DemoState } from './ui/types';
+import { POINTER_ACTIONS, type Controller, type ViewState, type PointerState, type MorphState, type DemoState, type AudioState } from './ui/types';
 
 const COUNT_OPTIONS: Record<string, number> = {
   '100k': 100_000,
@@ -44,6 +45,8 @@ export class App {
   private readonly pointerState: PointerState;
   private readonly morphState: MorphState;
   private readonly demo: DemoState;
+  private readonly audioState: AudioState;
+  private readonly audio = new AudioInput();
   private demoElapsed = 0;
   // Lighter default on phone-class devices; a shared link / preset still overrides.
   private count = COUNT_OPTIONS[isMobileLike() ? '250k' : '500k'];
@@ -67,6 +70,7 @@ export class App {
     this.pointerState = wrap<PointerState>({ mode: 'Off' });
     this.morphState = wrap<MorphState>({ shape: 'None' });
     this.demo = wrap<DemoState>({ enabled: false, interval: 6, fps: false });
+    this.audioState = wrap<AudioState>({ enabled: false });
 
     this.loadFromHash(); // a shared URL overrides the defaults before we build
 
@@ -96,6 +100,7 @@ export class App {
       pointerState: this.pointerState,
       morphState: this.morphState,
       demo: this.demo,
+      audioState: this.audioState,
       countOptions: COUNT_OPTIONS,
       getField: () => this.field,
       renderer,
@@ -116,6 +121,7 @@ export class App {
         this.demoElapsed = 0;
       },
       onStatsToggle: (on) => this.stats.setVisible(on),
+      onAudioToggle: (on) => this.toggleAudio(on),
       onMorphShape: (shape) => {
         this.morphState.shape = shape;
         this.applyMorphTarget();
@@ -188,6 +194,7 @@ export class App {
   private frame = () => {
     const delta = this.clock.getDelta();
     this.stepDemo(delta);
+    this.updateAudio();
     this.pointer.update();
     // Paused (speed 0) freezes the sim: every motion/colour kernel would produce
     // identical buffers, so skip the GPU compute entirely and just re-present.
@@ -208,6 +215,53 @@ export class App {
       this.demoElapsed = 0;
       this.applyMotionPreset((this.field.uniforms.motion.value + 1) % MOTION_MODES.length);
     }
+  }
+
+  /**
+   * Per-frame audio pump. Feeds the Spectrogram Waterfall its newest FFT row (only
+   * when that mode is active, to skip the upload otherwise) and modulates a few
+   * look uniforms by the live bands so ANY preset reacts to sound. The modulation
+   * recomputes from `params` each frame, so it's non-destructive — toggling the mic
+   * off restores the slider values (see {@link restoreAudioUniforms}).
+   */
+  private updateAudio() {
+    if (!this.audio.enabled) return;
+    this.audio.setGain(this.params.audioGain);
+    this.audio.update();
+    if (this.field.uniforms.motion.value === SPECTRO_MODE) {
+      this.field.pushAudioRow(this.audio.spectrum);
+    }
+    const { bass, treble, level } = this.audio.bands;
+    const amt = this.params.audioReactivity;
+    const u = this.field.uniforms;
+    u.size.value = this.params.size * (1 + bass * amt * 1.6);
+    u.exposure.value = this.params.exposure * (1 + level * amt * 0.9);
+    u.flowStrength.value = this.params.flowStrength * (1 + treble * amt * 1.3);
+    u.coreGlow.value = Math.min(1, this.params.coreGlow + bass * amt * 0.6);
+  }
+
+  /** Reset the audio-modulated uniforms back to their (unmodulated) param values. */
+  private restoreAudioUniforms() {
+    const u = this.field.uniforms;
+    u.size.value = this.params.size;
+    u.exposure.value = this.params.exposure;
+    u.flowStrength.value = this.params.flowStrength;
+    u.coreGlow.value = this.params.coreGlow;
+  }
+
+  /** Enable/disable the mic. Returns whether audio is live afterward. */
+  private async toggleAudio(on: boolean): Promise<boolean> {
+    if (on) {
+      const ok = await this.audio.enable();
+      this.audioState.enabled = ok;
+      if (!ok) this.field.setAudioActive(false);
+      return ok;
+    }
+    this.audio.disable();
+    this.audioState.enabled = false;
+    this.field.setAudioActive(false);
+    this.restoreAudioUniforms();
+    return true;
   }
 
   // --- actions ---------------------------------------------------------------
@@ -379,6 +433,7 @@ export class App {
     u.softness.value = this.params.softness;
     u.coreGlow.value = this.params.coreGlow;
     u.streak.value = this.params.streak;
+    u.spectroHeight.value = this.params.spectroHeight;
     u.fogDensity.value = this.params.fogDensity;
     u.fog.value.set(this.params.fogColor);
     u.warm.value.set(this.params.warmColor);

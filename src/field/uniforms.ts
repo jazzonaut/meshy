@@ -43,6 +43,12 @@ export function createUniforms(p: FieldParams, count: number) {
     slimeDecay: uniform(p.slimeDecay),
     morphAmount: uniform(p.morphAmount),
     morphStrength: uniform(p.morphStrength),
+    // Audio (Spectrogram Waterfall + reactivity). audioActive gates the waterfall
+    // between an idle ripple (0) and live mic amplitude (1); audioHead is the ring
+    // buffer's newest-row index; spectroHeight is the terrain's vertical scale.
+    audioActive: uniform(0),
+    audioHead: uniform(0),
+    spectroHeight: uniform(p.spectroHeight),
     size: uniform(p.size),
     exposure: uniform(p.exposure),
     softness: uniform(p.softness),

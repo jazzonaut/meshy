@@ -9,6 +9,7 @@ import AccordionContent from 'primevue/accordioncontent';
 import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import Button from 'primevue/button';
+import { useToast } from 'primevue/usetoast';
 import SliderRow from './SliderRow.vue';
 import ColorRow from './ColorRow.vue';
 import ToggleRow from './ToggleRow.vue';
@@ -20,6 +21,15 @@ const visible = defineModel<boolean>('visible', { required: true });
 const c = useController();
 const p = c.params;
 const f = () => c.getField();
+const toast = useToast();
+
+async function toggleMic() {
+  const turningOn = !c.audioState.enabled;
+  const ok = await c.onAudioToggle(turningOn);
+  if (turningOn && !ok) {
+    toast.add({ severity: 'warn', summary: 'Microphone blocked', detail: 'Allow mic access to react to sound.', life: 2800 });
+  }
+}
 
 // Contextual disclosure: the flock/slime tuning only does anything in those modes.
 const showFlock = computed(() => p.motion >= FIRST_GPU_MODE && p.motion <= CRYSTAL_MODE);
@@ -173,6 +183,28 @@ function setPerception(v: number) {
           </div>
           <SliderRow label="amount" :min="0" :max="1" :step="0.01" v-model="p.morphAmount" @input="() => c.onMorphParam()" />
           <SliderRow label="pull strength" :min="0" :max="12" :step="0.1" v-model="p.morphStrength" @input="() => c.onMorphParam()" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- Audio / Mic ------------------------------------------------------ -->
+      <AccordionPanel value="audio">
+        <AccordionHeader>Audio / Mic</AccordionHeader>
+        <AccordionContent>
+          <p class="pb-1 text-[11px] leading-snug text-surface-500">
+            When the mic is on, sound modulates any preset. Pick the
+            <em>Spectrogram Waterfall</em> mode for the 3D FFT terrain. Needs mic
+            permission (and a tap to start on mobile).
+          </p>
+          <Button
+            :label="c.audioState.enabled ? '🎤 disable microphone' : '🎤 enable microphone'"
+            size="small"
+            :severity="c.audioState.enabled ? 'success' : 'secondary'"
+            class="my-1 w-full"
+            @click="toggleMic"
+          />
+          <SliderRow label="reactivity (any preset)" :min="0" :max="1" :step="0.01" v-model="p.audioReactivity" />
+          <SliderRow label="input gain" :min="0.2" :max="4" :step="0.05" v-model="p.audioGain" />
+          <SliderRow label="waterfall height" :min="0" :max="2" :step="0.01" v-model="p.spectroHeight" @input="(v) => (f().uniforms.spectroHeight.value = v)" />
         </AccordionContent>
       </AccordionPanel>
 
