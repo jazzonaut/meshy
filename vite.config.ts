@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import { createHash } from 'node:crypto';
+import { readdirSync } from 'node:fs';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 
@@ -65,17 +66,28 @@ self.addEventListener('fetch', (e) => {
  */
 function offlinePrecache(): Plugin {
   let base = '/';
+  let publicDir = '';
   return {
     name: 'meshy-offline-precache',
     apply: 'build',
     configResolved(cfg) {
       base = cfg.base;
+      publicDir = cfg.publicDir;
     },
     generateBundle(_opts, bundle) {
       const assets = Object.keys(bundle).map((f) => base + f);
-      // Public-dir files bypass the bundle, so list them (and the app root) by hand.
-      const shell = [base, `${base}index.html`, `${base}manifest.webmanifest`, `${base}icon.svg`];
-      const precache = [...new Set([...shell, ...assets])].sort();
+      // Public-dir files (icons, manifest, favicon) bypass the bundle, so enumerate
+      // them so they're cached too; plus the app root for the navigation fallback.
+      let publicFiles: string[] = [];
+      try {
+        publicFiles = readdirSync(publicDir).map((f) => base + f);
+      } catch {
+        /* no public dir — nothing extra to precache */
+      }
+      // `base` is the navigation entry; index.html may be emitted after this hook,
+      // so list it explicitly. Never precache the service worker itself.
+      const all = [base, `${base}index.html`, ...assets, ...publicFiles];
+      const precache = [...new Set(all)].filter((u) => !u.endsWith('/sw.js')).sort();
       const version = createHash('sha1').update(precache.join('|')).digest('hex').slice(0, 8);
       const source = SW_TEMPLATE.replace('__CACHE__', `meshy-${version}`)
         .replace('__PRECACHE__', JSON.stringify(precache))

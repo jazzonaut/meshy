@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable variant: full-bleed background (the platform mask supplies the
+       shape) with the artwork scaled to ~80% so it stays inside the safe zone. -->
+  <rect width="512" height="512" fill="#05070a"/>
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M109 308c58-138 213-136 294-28" stroke="#76b7ff" stroke-width="22"/>
+      <path d="M132 213c80 113 214 118 266 5" stroke="#ff7a2f" stroke-width="20"/>
+      <path d="M160 356c42-45 88-67 138-66 32 1 60 11 84 31" stroke="#f6f8ff" stroke-opacity=".78" stroke-width="14"/>
+      <path d="M169 159c56-22 111-18 166 10" stroke="#f6f8ff" stroke-opacity=".5" stroke-width="12"/>
+    </g>
+    <g fill="#f6f8ff">
+      <circle cx="109" cy="308" r="12"/>
+      <circle cx="132" cy="213" r="10"/>
+      <circle cx="169" cy="159" r="8"/>
+      <circle cx="298" cy="290" r="9"/>
+      <circle cx="398" cy="218" r="11"/>
+      <circle cx="403" cy="280" r="10"/>
+    </g>
+  </g>
+</svg>
