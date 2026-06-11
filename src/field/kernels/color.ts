@@ -4,7 +4,10 @@ import type { FieldContext } from '../context';
 /**
  * COLOR pass: per-mode palette strategies selected by `u.motion`. Each line blends
  * in a mode's palette gated by a step window around its index, so the modes don't
- * interfere. Runs every frame (cheap) so motion that affects colour stays live.
+ * interfere. Dispatched every frame for modes whose palette reads live state
+ * (velocity / time / trail / position); for the static-palette modes the caller
+ * skips the per-frame dispatch and only re-runs this on mode switch / recolour /
+ * regenerate (see colorIsDynamic in config).
  */
 export function createColorKernel({ u, buffers, trail }: FieldContext, count: number) {
   return Fn(() => {

@@ -436,6 +436,7 @@ export function createPerParticleKernel({ u, buffers, forces }: FieldContext, co
       });
     }
 
+    forces.applyAudio(pos, vel, dt, phase);
     forces.applyMorph(pos, vel, dt);
     forces.applyPointer(pos, vel, dt);
 

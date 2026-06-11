@@ -9,6 +9,8 @@ export {
   MATERIAL_STYLES,
   MORPH_SHAPES,
   MOTION_PRESETS,
+  AUDIO_RESPONSE,
+  type AudioResponse,
   DEFAULT_PARAMS,
   type MorphShape,
   type MotionMode,

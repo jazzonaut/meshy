@@ -49,6 +49,18 @@ export function createUniforms(p: FieldParams, count: number) {
     audioActive: uniform(0),
     audioHead: uniform(0),
     spectroHeight: uniform(p.spectroHeight),
+    // Audio-reactive MOTION. The CPU pushes the live FFT bands here each frame
+    // (already scaled by audioReactivity, so 0 = mic off / no motion), and the
+    // per-mode response weights below pick how each band drives the shared
+    // `applyAudio` force. Each mode "decides" via AUDIO_RESPONSE in config.ts.
+    audioBass: uniform(0), // low end → radial pulse
+    audioMid: uniform(0), // mids → tangential swirl
+    audioTreble: uniform(0), // highs → curl-noise shimmer
+    audioLevel: uniform(0), // overall loudness → vertical bob
+    audioPulse: uniform(0),
+    audioSwirl: uniform(0),
+    audioJitter: uniform(0),
+    audioLift: uniform(0),
     // Constellation lines (a viewing overlay, like the post effects — not part of
     // FieldParams, so off by default and not round-tripped in presets/share links).
     linkRadius: uniform(2.5),

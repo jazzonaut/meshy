@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, SPECTRO_MODE, type FieldParams, type MorphShape } from '../field';
+import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, AUDIO_RESPONSE, SPECTRO_MODE, type FieldParams, type MorphShape } from '../field';
 import { createRenderer } from './createRenderer';
 import { Stage } from './Stage';
 import { Controls } from './Controls';
@@ -255,13 +255,26 @@ export class App {
     if (this.field.uniforms.motion.value === SPECTRO_MODE) {
       this.field.pushAudioRow(this.audio.spectrum);
     }
-    const { bass, treble, level } = this.audio.bands;
+    const { bass, mid, treble, level } = this.audio.bands;
     const amt = this.params.audioReactivity;
     const u = this.field.uniforms;
+    // Look modulation (brightness/size/flow), as before.
     u.size.value = this.params.size * (1 + bass * amt * 1.6);
     u.exposure.value = this.params.exposure * (1 + level * amt * 0.9);
     u.flowStrength.value = this.params.flowStrength * (1 + treble * amt * 1.3);
     u.coreGlow.value = Math.min(1, this.params.coreGlow + bass * amt * 0.6);
+    // Motion modulation: push the reactivity-scaled bands + the current mode's
+    // response weights so the shared `applyAudio` force moves the field too. Each
+    // mode reacts in its own character via AUDIO_RESPONSE.
+    u.audioBass.value = bass * amt;
+    u.audioMid.value = mid * amt;
+    u.audioTreble.value = treble * amt;
+    u.audioLevel.value = level * amt;
+    const r = AUDIO_RESPONSE[u.motion.value] ?? AUDIO_RESPONSE[0];
+    u.audioPulse.value = r.pulse;
+    u.audioSwirl.value = r.swirl;
+    u.audioJitter.value = r.jitter;
+    u.audioLift.value = r.lift;
   }
 
   /** Reset the audio-modulated uniforms back to their (unmodulated) param values. */
@@ -271,6 +284,11 @@ export class App {
     u.exposure.value = this.params.exposure;
     u.flowStrength.value = this.params.flowStrength;
     u.coreGlow.value = this.params.coreGlow;
+    // Zero the audio-motion drive so the shared force vanishes (mic off → no motion).
+    u.audioBass.value = 0;
+    u.audioMid.value = 0;
+    u.audioTreble.value = 0;
+    u.audioLevel.value = 0;
   }
 
   /** Push the constellation overlay state onto the field (params before toggle so

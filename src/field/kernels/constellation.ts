@@ -38,12 +38,6 @@ export function createConstellationKernel({ u, buffers, grid }: FieldContext) {
       linkDotAlpha.element(idx).assign(float(0));
     });
 
-    // DIAGNOSTIC (temporary): force each link-node's first dot fully visible at its
-    // own position, so ~LINK_NODES bright dots appear regardless of link-finding.
-    // If these show, the render path works and only the neighbour search is at fault;
-    // if they don't, the render path itself is the problem.
-    linkDotAlpha.element(baseDot).assign(float(1));
-
     const r = min(u.linkRadius, u.cellSize);
     const r2 = r.mul(r);
     const found = uint(0).toVar(); // link counter; uint so all index maths stays uint

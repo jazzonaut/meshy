@@ -132,6 +132,7 @@ export function createFlockKernels(ctx: FieldContext, count: number) {
     });
 
     forces.applyWind(pos, vel, dt, u.flowStrength); // Crystallize sets flowStrength 0
+    forces.applyAudio(pos, vel, dt, buffers.props.element(self).y);
     forces.applyMorph(pos, vel, dt);
     forces.applyPointer(pos, vel, dt);
     forces.applyContainment(pos, vel, dt);

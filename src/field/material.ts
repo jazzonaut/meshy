@@ -100,8 +100,11 @@ export function createParticleMaterial({ u, buffers }: FieldContext, initialStyl
   let blendDepthWrite = false; // additive default
   let dofDepthWrite = false;
   function applyDepthWrite() {
+    // No needsUpdate: the WebGPU backend diffs depthWrite/blending/alphaToCoverage
+    // against its cached pipeline state every render (WebGPUBackend.needsRenderUpdate),
+    // so these re-fetch the right pipeline on their own. needsUpdate would instead
+    // force a full shader-program rebuild we don't want here.
     material.depthWrite = blendDepthWrite || dofDepthWrite;
-    material.needsUpdate = true;
   }
 
   // 'additive' = glowing nebula look (overlaps brighten); 'normal' = solid dots

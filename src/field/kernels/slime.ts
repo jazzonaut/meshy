@@ -60,6 +60,7 @@ export function createSlimeKernels(ctx: FieldContext, count: number) {
     });
 
     forces.applyWind(pos, vel, dt, u.slimeWander);
+    forces.applyAudio(pos, vel, dt, buffers.props.element(instanceIndex).y);
     forces.applyMorph(pos, vel, dt);
     forces.applyPointer(pos, vel, dt);
     forces.applyContainment(pos, vel, dt);

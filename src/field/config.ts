@@ -144,6 +144,36 @@ export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Thomas Tangle');
 export const FIRST_GPU_MODE = BOIDS_MODE;
 
 /**
+ * Per-mode flag: does the colour palette actually change frame to frame? The modes
+ * below derive colour only from per-particle attributes (mass / phase / species /
+ * size) and the static `home` position — never from live velocity, time, the trail
+ * field, or the moving `pos` — so their colour buffer is identical every frame and
+ * the per-frame colour dispatch is pure waste. {@link ParticleField.update} skips
+ * the colour pass for them; it still runs on mode switch, on `recolor()` (warm/cool
+ * edits), and on `regenerate()`, so the colour is always current. Listed by name so
+ * the set survives a reordering of MOTION_MODES (the colour kernel is keyed to the
+ * same indices, so any reorder must update both regardless).
+ */
+const STATIC_COLOR_MODE_NAMES: readonly MotionMode[] = [
+  'Ambient Curl',
+  'Galactic Vortex',
+  'Convection (color)',
+  'Dual Attractors (color)',
+  'Orbital Shells',
+  'Color Sorting',
+  'Aizawa Orbit',
+  'Kaleidoscope Fold',
+  'Phyllotaxis Sphere',
+  'Möbius Band',
+  'Harmonic Bloom',
+  'Tesseract',
+  'Crystallize (GPU)',
+];
+const STATIC_COLOR_MODES = new Set(STATIC_COLOR_MODE_NAMES.map((n) => MOTION_MODES.indexOf(n)));
+/** Whether the active mode needs a colour pass every frame (see {@link STATIC_COLOR_MODE_NAMES}). */
+export const colorIsDynamic = (mode: number) => !STATIC_COLOR_MODES.has(mode);
+
+/**
  * GPU spatial-hash grid sizing for the flock modes. Particles are bucketed into a
  * GRID_RES³ uniform grid (cell size is a uniform, so the grid scales with the
  * perception radius); each cell holds up to BUCKET_CAP particle indices. The cap
@@ -246,6 +276,64 @@ export type MotionPreset = Pick<
   FieldParams,
   'speed' | 'flowScale' | 'flowStrength' | 'timeSpeed' | 'spring' | 'damping'
 >;
+
+/**
+ * Per-mode audio-reactive MOTION response. One row per motion mode (index matches
+ * MOTION_MODES). Each weight scales one band → motion mapping in the shared
+ * `applyAudio` force, so a mode "decides" how the microphone moves it:
+ *   pulse  — bass drives a radial in/out breath (the kick)
+ *   swirl  — mids drive a tangential spin about world up (the body)
+ *   jitter — treble drives a curl-noise shimmer (hats / cymbals)
+ *   lift   — overall level drives a phase-staggered vertical bob
+ * 0 disables that band for the mode. The mic toggle / audioReactivity scale all of
+ * these globally, so the field is motionless (as before) until the mic is live.
+ * Tweak a row to retune a single mode — no shader edits required.
+ */
+export interface AudioResponse {
+  pulse: number;
+  swirl: number;
+  jitter: number;
+  lift: number;
+}
+
+export const AUDIO_RESPONSE: AudioResponse[] = [
+  { pulse: 0.6, swirl: 0.4, jitter: 0.8, lift: 0.3 }, // 0  Ambient Curl
+  { pulse: 0.5, swirl: 1.2, jitter: 0.4, lift: 0.2 }, // 1  Galactic Vortex
+  { pulse: 0.3, swirl: 0.3, jitter: 0.6, lift: 1.0 }, // 2  Convection
+  { pulse: 0.6, swirl: 1.0, jitter: 0.5, lift: 0.3 }, // 3  Dual Attractors
+  { pulse: 1.4, swirl: 0.2, jitter: 0.4, lift: 0.4 }, // 4  Pulse Waves
+  { pulse: 0.4, swirl: 0.9, jitter: 0.5, lift: 0.6 }, // 5  Magnetic Field Lines
+  { pulse: 0.3, swirl: 1.3, jitter: 0.4, lift: 0.9 }, // 6  Tornado Column
+  { pulse: 1.3, swirl: 0.3, jitter: 0.4, lift: 0.4 }, // 7  Breathing Nebula
+  { pulse: 1.5, swirl: 0.2, jitter: 0.6, lift: 0.3 }, // 8  Implosion / Supernova
+  { pulse: 0.5, swirl: 1.0, jitter: 0.4, lift: 0.3 }, // 9  Orbital Shells
+  { pulse: 0.4, swirl: 0.4, jitter: 0.9, lift: 0.4 }, // 10 Color Sorting
+  { pulse: 0.4, swirl: 0.4, jitter: 1.4, lift: 0.4 }, // 11 Electric Arcs
+  { pulse: 0.4, swirl: 1.2, jitter: 0.5, lift: 0.3 }, // 12 Black Hole Accretion
+  { pulse: 0.5, swirl: 0.6, jitter: 0.9, lift: 0.4 }, // 13 Flocking Swarm
+  { pulse: 0.3, swirl: 0.4, jitter: 0.7, lift: 0.9 }, // 14 Ash Fall
+  { pulse: 0.4, swirl: 0.5, jitter: 0.7, lift: 0.3 }, // 15 Lorenz Drift
+  { pulse: 0.4, swirl: 0.9, jitter: 0.5, lift: 0.4 }, // 16 Aizawa Orbit
+  { pulse: 1.2, swirl: 0.2, jitter: 0.5, lift: 0.2 }, // 17 Cymatic Plate
+  { pulse: 0.5, swirl: 0.9, jitter: 0.9, lift: 0.3 }, // 18 Kaleidoscope Fold
+  { pulse: 0.7, swirl: 1.0, jitter: 0.4, lift: 0.4 }, // 19 Vortex Ring
+  { pulse: 1.0, swirl: 0.3, jitter: 0.8, lift: 0.3 }, // 20 Interference Lattice
+  { pulse: 0.4, swirl: 0.7, jitter: 1.0, lift: 0.3 }, // 21 Slipstream
+  { pulse: 1.1, swirl: 0.5, jitter: 0.4, lift: 0.3 }, // 22 Phyllotaxis Sphere
+  { pulse: 0.5, swirl: 0.9, jitter: 0.5, lift: 0.4 }, // 23 Möbius Band
+  { pulse: 1.4, swirl: 0.3, jitter: 0.5, lift: 0.4 }, // 24 Harmonic Bloom
+  { pulse: 0.5, swirl: 0.9, jitter: 0.7, lift: 0.3 }, // 25 Gravity Wells
+  { pulse: 0.4, swirl: 1.0, jitter: 0.4, lift: 0.8 }, // 26 Spiral Staircase
+  { pulse: 0.5, swirl: 0.6, jitter: 0.9, lift: 0.4 }, // 27 Tesseract
+  { pulse: 0.4, swirl: 0.9, jitter: 0.5, lift: 0.7 }, // 28 Magnetosphere
+  { pulse: 0.4, swirl: 0.7, jitter: 0.8, lift: 0.3 }, // 29 Thomas Tangle
+  { pulse: 0.4, swirl: 0.7, jitter: 0.9, lift: 0.4 }, // 30 Boids Flock (GPU)
+  { pulse: 0.9, swirl: 0.5, jitter: 0.9, lift: 0.4 }, // 31 Predator Scatter (GPU)
+  { pulse: 0.8, swirl: 0.3, jitter: 0.7, lift: 0.5 }, // 32 Liquid Droplets (GPU)
+  { pulse: 0.3, swirl: 0.2, jitter: 0.6, lift: 0.2 }, // 33 Crystallize (GPU)
+  { pulse: 0.3, swirl: 0.4, jitter: 0.8, lift: 0.3 }, // 34 Slime Mold (GPU)
+  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 35 Spectrogram Waterfall (already audio-driven)
+];
 
 export const DEFAULT_PARAMS: FieldParams = {
   speed: 5.0,

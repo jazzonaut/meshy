@@ -1,4 +1,4 @@
-import { If, instanceIndex, vec3 } from 'three/tsl';
+import { If, float, instanceIndex, vec3 } from 'three/tsl';
 import type { FieldUniforms } from '../uniforms';
 import type { FieldBuffers } from '../buffers';
 import { cn } from './curlNoise';
@@ -85,7 +85,31 @@ export function createForces(u: FieldUniforms, buffers: FieldBuffers) {
     vel.addAssign(target.sub(pos).mul(u.morphStrength.mul(u.morphAmount)).mul(dt));
   };
 
-  return { applyPointer, applyContainment, applyWind, applyMorph };
+  // Microphone-driven MOTION, shared by every mode. The four FFT bands each map to
+  // a distinct, musically-intuitive impulse; the per-mode response weights (set
+  // from AUDIO_RESPONSE) scale them so each mode reacts in its own character. When
+  // the mic is off the CPU zeroes the band uniforms, so every term vanishes and the
+  // motion is exactly as before — fully non-destructive, like the look modulation.
+  // `phase` is the particle's per-particle wave offset (props.y), used to
+  // decorrelate the shimmer/bob so the field sparkles rather than moving in lockstep.
+  const applyAudio = (pos: any, vel: any, dt: any, phase: any) => {
+    const rho = vec3(pos.x, 0, pos.z).length().add(0.001);
+    const dir = pos.div(pos.length().add(0.001)); // outward from centre
+    const tan = vec3(pos.z.mul(-1), 0, pos.x).div(rho); // tangent about world up
+    // Bass → radial pulse (the "kick" breathes the cloud out and back).
+    vel.addAssign(dir.mul(u.audioBass.mul(u.audioPulse).mul(7.0)).mul(dt));
+    // Mid → tangential swirl (the body of the sound spins the field).
+    vel.addAssign(tan.mul(u.audioMid.mul(u.audioSwirl).mul(6.0)).mul(dt));
+    // Treble → high-frequency curl shimmer (hats/cymbals sparkle the surface).
+    const jit = cn(pos.mul(u.flowScale.mul(2.5)).add(vec3(phase, u.time.mul(u.timeSpeed.mul(2.0)), phase.mul(1.7))));
+    vel.addAssign(jit.mul(u.audioTreble.mul(u.audioJitter).mul(6.0)).mul(dt));
+    // Level → vertical bob, phase-staggered so it ripples instead of pistoning.
+    const bob = float(phase).add(u.time.mul(u.timeSpeed.mul(6.0))).sin();
+    const lift = u.audioLevel.mul(u.audioLift).mul(bob).mul(6.0);
+    vel.addAssign(vec3(0, lift, 0).mul(dt));
+  };
+
+  return { applyPointer, applyContainment, applyWind, applyMorph, applyAudio };
 }
 
 export type Forces = ReturnType<typeof createForces>;

@@ -4,6 +4,7 @@ import {
   MOTION_GROUPS,
   MATERIAL_STYLES,
   MOTION_PRESETS,
+  AUDIO_RESPONSE,
   DEFAULT_PARAMS,
   BOIDS_MODE,
   PREDATOR_MODE,
@@ -37,6 +38,18 @@ describe('motion modes ↔ presets', () => {
 
   it('has no duplicate mode labels', () => {
     expect(new Set(MOTION_MODES).size).toBe(MOTION_MODES.length);
+  });
+
+  it('has one audio-motion response row per mode with finite, non-negative weights', () => {
+    expect(AUDIO_RESPONSE).toHaveLength(MOTION_MODES.length);
+    const keys = ['pulse', 'swirl', 'jitter', 'lift'] as const;
+    for (const [i, row] of AUDIO_RESPONSE.entries()) {
+      for (const key of keys) {
+        const v = row[key];
+        expect(Number.isFinite(v), `AUDIO_RESPONSE ${i} (${MOTION_MODES[i]}) key "${key}"`).toBe(true);
+        expect(v, `AUDIO_RESPONSE ${i} (${MOTION_MODES[i]}) key "${key}"`).toBeGreaterThanOrEqual(0);
+      }
+    }
   });
 
   it('puts every mode in exactly one picker group', () => {

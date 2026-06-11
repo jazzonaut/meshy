@@ -1,6 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { instanceIndex } from 'three/tsl';
-import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, SPECTRO_MODE, SPECTRO_W, SPECTRO_D, SPECTRO_CELLS, type FieldParams } from './config';
+import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, SPECTRO_MODE, SPECTRO_W, SPECTRO_D, SPECTRO_CELLS, colorIsDynamic, type FieldParams } from './config';
 import { createUniforms, type FieldUniforms } from './uniforms';
 import { createBuffers, disposeBuffers, type FieldBuffers } from './buffers';
 import { createContext } from './context';
@@ -209,7 +208,10 @@ export class ParticleField {
     } else {
       this.renderer.compute(this.kPerParticle);
     }
-    this.renderer.compute(this.kColor);
+    // Skip the full-count colour dispatch for modes whose palette can't change
+    // frame to frame (it reads only static per-particle attrs + home). Mode switch,
+    // recolour and regenerate still run it, so the colour stays correct.
+    if (colorIsDynamic(motion)) this.renderer.compute(this.kColor);
     if (this.linksOn) this.buildLinks();
   }
 

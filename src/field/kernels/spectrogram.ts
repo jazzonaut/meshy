@@ -1,4 +1,4 @@
-import { Fn, instanceIndex, float, uint, floor, fract, mix, vec3 } from 'three/tsl';
+import { Fn, instanceIndex, float, uint, floor, hash, mix, vec3 } from 'three/tsl';
 import type { FieldContext } from '../context';
 import { SPECTRO_W, SPECTRO_D, SPECTRO_CELLS } from '../config';
 
@@ -54,9 +54,12 @@ export function createSpectrogramKernel({ u, buffers }: FieldContext, count: num
     const y = height.mul(u.spectroHeight.mul(u.radius)).sub(u.radius.mul(0.3));
 
     // Per-particle jitter so the many particles sharing each cell spread across it.
+    // hash() (not sin of the raw index) keeps this stable at million-scale counts:
+    // sin/cos lose all precision for arguments that large on mobile GPUs — the same
+    // pitfall the init kernel range-reduces around — which would collapse the jitter.
     const jitter = span.div(float(W)).mul(0.5);
-    const j1 = fract(fi.mul(0.0009173).add(fi.mul(12.9898).sin().mul(43758.5453))).sub(0.5);
-    const j2 = fract(fi.mul(0.0007531).add(fi.mul(78.233).sin().mul(12543.654))).sub(0.5);
+    const j1 = hash(fi.mul(2.0).add(0.123)).sub(0.5);
+    const j2 = hash(fi.mul(3.0).add(11.71)).sub(0.5);
     const target = vec3(x.add(j1.mul(jitter)), y, z.add(j2.mul(jitter)));
 
     // Ease onto the target; clamp so it never overshoots at high framerates. This
