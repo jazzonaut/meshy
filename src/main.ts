@@ -13,6 +13,15 @@ function registerServiceWorker() {
   });
 }
 
+/** Update the loading veil's label + determinate progress bar. */
+function reportProgress(fraction: number, label: string) {
+  const labelEl = document.getElementById('loading-label');
+  const barEl = document.getElementById('loading-bar');
+  if (labelEl && label) labelEl.textContent = label;
+  // scaleX on the compositor keeps the bar smooth even mid-compile.
+  if (barEl) barEl.style.transform = `scaleX(${Math.max(0, Math.min(1, fraction))})`;
+}
+
 /** Fade out and remove the loading veil once the first frame is ready. */
 function dismissLoader() {
   const el = document.getElementById('loading');
@@ -37,7 +46,7 @@ async function main() {
   // is smooth rather than a compile stall. Non-fatal: the loop compiles lazily if
   // warmup fails, so we still boot.
   try {
-    await app.warmup();
+    await app.warmup(reportProgress);
   } catch {
     /* fall back to lazy first-frame compilation */
   }

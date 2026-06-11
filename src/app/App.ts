@@ -140,6 +140,7 @@ export class App {
   }
 
   start() {
+    this.field.ensureSeeded(); // guard the first frame if warmup was skipped/failed
     this.renderer.setAnimationLoop(this.frame);
   }
 
@@ -147,14 +148,40 @@ export class App {
    * Compile the GPU pipelines the first frame will need — the active mode's compute
    * kernels (via the field), the sprite material, and the bloom/afterImage post
    * passes — so the shader-compile cost is paid behind the loading screen instead
-   * of as a visible first-frame stall. Best-effort: the render loop would compile
-   * these lazily anyway, so a failure here is non-fatal.
+   * of as a visible first-frame stall.
+   *
+   * The work is split into discrete steps run through the async (non-blocking)
+   * pipeline-creation path, with a frame yielded between each. That keeps the main
+   * thread responsive — the loading spinner keeps spinning and the progress bar
+   * repaints — instead of freezing the browser through one long synchronous compile.
+   * Best-effort: the render loop would compile these lazily anyway, so a failure is
+   * non-fatal. `onProgress` reports `(fraction 0..1, label)` for the loading UI.
    */
-  async warmup() {
-    await this.field.warmup();
-    // One render compiles the sprite material + the postprocessing node chain. The
-    // canvas is still hidden behind the loader, so this frame isn't seen.
+  async warmup(onProgress?: (fraction: number, label: string) => void) {
+    const report = onProgress ?? (() => {});
+    const yieldFrame = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const steps: { label: string; run: () => Promise<void> }[] = [
+      { label: 'Seeding the particle field…', run: () => this.field.warmupSeed() },
+      { label: 'Compiling motion shaders…', run: () => this.field.warmupMotion() },
+      { label: 'Compiling colour pass…', run: () => this.field.warmupColor() },
+      // Async-compile the render pipeline (sprite material) without a blocking render.
+      { label: 'Compiling renderer…', run: () => this.renderer.compileAsync(this.stage.scene, this.stage.camera) },
+    ];
+
+    for (let i = 0; i < steps.length; i++) {
+      report(i / (steps.length + 1), steps[i].label);
+      await yieldFrame(); // let the spinner + label/bar paint before the heavy step
+      await steps[i].run();
+    }
+
+    // Final, comparatively small compile: the postprocessing quad chain (bloom +
+    // grade). One hidden render triggers it; the canvas is still behind the loader.
+    report(steps.length / (steps.length + 1), 'Compiling bloom & grade…');
+    await yieldFrame();
     this.post.render();
+    report(1, 'Ready');
   }
 
   // --- per-frame -------------------------------------------------------------
@@ -191,6 +218,7 @@ export class App {
     this.field.dispose();
     this.field = new ParticleField(this.renderer, this.count, this.params);
     this.field.setMaterialStyle(this.params.materialStyle);
+    this.field.seed(); // constructor no longer self-seeds; pipelines are already warm here
     this.stage.scene.add(this.field.object);
     this.controls.setGizmo(wasOn); // re-attach to the freshly built object
     this.applyPointerForce(); // re-apply onto the new field's uniforms

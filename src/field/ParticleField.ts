@@ -23,20 +23,28 @@ export class ParticleField {
 
   private readonly renderer: THREE.WebGPURenderer;
   private readonly buffers: FieldBuffers;
+  private readonly ctx: ReturnType<typeof createContext>;
   private readonly material: THREE.SpriteNodeMaterial;
   private readonly setMaterialStyleImpl: (style: number) => void;
   private readonly setBlendModeImpl: (mode: BlendMode) => void;
   private readonly setDepthWriteImpl: (on: boolean) => void;
 
+  // Init + colour kernels are cheap to build and needed for every seed/recolour,
+  // so they're eager. The four heavy motion-kernel graphs (classic / experimental /
+  // flock / slime) are built lazily on first use — at boot only the *active* mode's
+  // graph is constructed and compiled, which keeps the cold-start path light. (A
+  // mode the user switches to later compiles on its first dispatch, exactly as it
+  // did before this was made lazy.)
   private readonly kInit: ReturnType<typeof createInitKernel>;
   private readonly kColor: ReturnType<typeof createColorKernel>;
-  private readonly kPerParticle: ReturnType<typeof createPerParticleKernel>;
-  private readonly kExperimental: ReturnType<typeof createPerParticleKernel>;
-  private readonly kFlock: ReturnType<typeof createFlockKernels>;
-  private readonly kSlime: ReturnType<typeof createSlimeKernels>;
+  private _kPerParticle?: ReturnType<typeof createPerParticleKernel>;
+  private _kExperimental?: ReturnType<typeof createPerParticleKernel>;
+  private _kFlock?: ReturnType<typeof createFlockKernels>;
+  private _kSlime?: ReturnType<typeof createSlimeKernels>;
 
   private speed: number;
   private simTime = 0;
+  private seeded = false;
 
   constructor(renderer: THREE.WebGPURenderer, count: number, params: FieldParams) {
     this.renderer = renderer;
@@ -45,16 +53,12 @@ export class ParticleField {
 
     this.uniforms = createUniforms(params, count);
     this.buffers = createBuffers(count);
-    const ctx = createContext(this.uniforms, this.buffers);
+    this.ctx = createContext(this.uniforms, this.buffers);
 
-    this.kInit = createInitKernel(ctx, count);
-    this.kColor = createColorKernel(ctx, count);
-    this.kPerParticle = createPerParticleKernel(ctx, count, 'classic');
-    this.kExperimental = createPerParticleKernel(ctx, count, 'experimental');
-    this.kFlock = createFlockKernels(ctx, count);
-    this.kSlime = createSlimeKernels(ctx, count);
+    this.kInit = createInitKernel(this.ctx, count);
+    this.kColor = createColorKernel(this.ctx, count);
 
-    const mat = createParticleMaterial(ctx, params.materialStyle);
+    const mat = createParticleMaterial(this.ctx, params.materialStyle);
     this.material = mat.material;
     this.setMaterialStyleImpl = mat.setMaterialStyle;
     this.setBlendModeImpl = mat.setBlendMode;
@@ -65,20 +69,42 @@ export class ParticleField {
     sprites.frustumCulled = false;
     this.object = sprites;
 
-    // Seed structure + colour once.
-    renderer.compute(this.kInit);
-    renderer.compute(this.kColor);
+    // No GPU work here: seeding is deferred to warmup()/seed() so the cold-start
+    // shader compile happens off the constructor's synchronous critical path.
+  }
+
+  // Lazily-built motion kernels (see field declarations above).
+  private get kPerParticle() {
+    return (this._kPerParticle ??= createPerParticleKernel(this.ctx, this.count, 'classic'));
+  }
+  private get kExperimental() {
+    return (this._kExperimental ??= createPerParticleKernel(this.ctx, this.count, 'experimental'));
+  }
+  private get kFlock() {
+    return (this._kFlock ??= createFlockKernels(this.ctx, this.count));
+  }
+  private get kSlime() {
+    return (this._kSlime ??= createSlimeKernels(this.ctx, this.count));
   }
 
   /**
-   * Pre-compile the compute pipelines the first frame will dispatch for the
-   * *current* motion mode (a shared link / preset may have set a non-default one),
-   * plus the colour pass. Awaiting these moves the WGSL → pipeline compile cost off
-   * the first-frame critical path so it can happen behind a loading screen. Mirrors
-   * the branch selection in {@link update}; runs each kernel once (a harmless
-   * sub-frame step) which is what triggers compilation.
+   * Seed particle structure asynchronously. Uses {@link THREE.WebGPURenderer#computeAsync}
+   * (the non-blocking pipeline-creation path) so the WGSL → pipeline compile happens
+   * off the main thread, leaving the UI — and the loading spinner — responsive.
    */
-  async warmup() {
+  async warmupSeed() {
+    await this.renderer.computeAsync(this.kInit);
+    this.seeded = true;
+  }
+
+  /**
+   * Async-compile the compute pipelines the first frame will dispatch for the
+   * *current* motion mode (a shared link / preset may have set a non-default one).
+   * Mirrors the branch selection in {@link update}; running each kernel once is what
+   * triggers compilation. Only the active mode is compiled — other modes compile on
+   * their first dispatch when the user switches to them.
+   */
+  async warmupMotion() {
     const c = this.renderer;
     const motion = this.uniforms.motion.value;
     if (motion === SLIME_MODE) {
@@ -95,7 +121,27 @@ export class ParticleField {
     } else {
       await c.computeAsync(this.kPerParticle);
     }
-    await c.computeAsync(this.kColor);
+  }
+
+  /** Async-compile + run the colour pass. */
+  async warmupColor() {
+    await this.renderer.computeAsync(this.kColor);
+  }
+
+  /**
+   * Synchronously seed structure + colour. Used on the warm paths (rebuild after a
+   * count change, regenerate) where the init/colour pipelines are already compiled,
+   * so the compute is just a fast dispatch — no shader-compile stall.
+   */
+  seed() {
+    this.renderer.compute(this.kInit);
+    this.renderer.compute(this.kColor);
+    this.seeded = true;
+  }
+
+  /** Seed if warmup never ran (e.g. it failed) so the first frame isn't all-origin. */
+  ensureSeeded() {
+    if (!this.seeded) this.seed();
   }
 
   /** Re-run the init pass: re-arrange structure & colour with a fresh seed. */
