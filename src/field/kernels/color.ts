@@ -90,13 +90,33 @@ export function createColorKernel({ u, buffers, trail }: FieldContext, count: nu
     // density so the self-organised network glows along its strands.
     const trailGlow = min(trail.sampleTrail(pos).mul(0.6), 1.0);
     color = mix(color, mix(vec3(0.0, 0.12, 0.09), vec3(0.25, 1.0, 0.65), trailGlow).add(vec3(0.6, 1.0, 0.85).mul(pow(trailGlow, 2.0).mul(0.7))).mul(baseBright.mul(1.6)), step(33.5, u.motion).mul(float(1).sub(step(34.5, u.motion))));
-    // 35 — Spectrogram Waterfall: hue runs across the frequency axis (X), and the
+    // 35 — Frequency Rings: bass-blue at the centre warming to treble-red at the
+    // rim (hue by radius), amplitude crests glowing hot-white.
+    const ringR01 = saturate(vec3(pos.x, float(0), pos.z).length().div(u.radius.mul(0.8)));
+    const ringAmp = saturate(pos.y.add(u.radius.mul(0.2)).div(u.radius.mul(u.spectroHeight).max(0.001)));
+    const ringHue = mix(vec3(0.1, 0.5, 1.0), vec3(1.0, 0.3, 0.2), ringR01);
+    const ringCol = ringHue.mul(baseBright.mul(1.3)).add(vec3(1.0, 0.95, 0.8).mul(pow(ringAmp, 2.0).mul(0.08)));
+    color = mix(color, ringCol, step(34.5, u.motion).mul(float(1).sub(step(35.5, u.motion))));
+    // 36 — Bass Bloom: violet core blooming to a cyan shell by radius, white-hot on
+    // the swollen surface so loud kicks flare under bloom.
+    const bloomR01 = saturate(pos.length().div(u.radius.mul(0.9)));
+    const bloomHue = mix(vec3(0.35, 0.1, 0.7), vec3(0.1, 0.9, 1.0), bloomR01);
+    const bloomCol = bloomHue.mul(baseBright.mul(1.4)).add(vec3(1.0, 0.8, 0.9).mul(pow(bloomR01, 3.0).mul(0.05)));
+    color = mix(color, bloomCol, step(35.5, u.motion).mul(float(1).sub(step(36.5, u.motion))));
+    // 37 — Spectrum Bars: green→orange across the frequency axis (X), tips glowing
+    // white as each bar peaks.
+    const barFreq = saturate(pos.x.div(u.radius.mul(1.4)).add(0.5));
+    const barAmp = saturate(pos.y.add(u.radius.mul(0.4)).div(u.radius.mul(u.spectroHeight).max(0.001)));
+    const barHue = mix(vec3(0.0, 0.8, 0.5), vec3(1.0, 0.5, 0.0), barFreq);
+    const barCol = barHue.mul(baseBright.mul(1.3)).add(vec3(1.0, 1.0, 0.8).mul(pow(barAmp, 2.0).mul(0.07)));
+    color = mix(color, barCol, step(36.5, u.motion).mul(float(1).sub(step(37.5, u.motion))));
+    // 38 — Spectrogram Waterfall: hue runs across the frequency axis (X), and the
     // amplitude crests glow hot-white. Position-derived so it follows the live mic.
     const specFreq = saturate(pos.x.div(u.radius.mul(1.7)).add(0.5)); // 0 = low freq … 1 = high
     const specAmp = saturate(pos.y.add(u.radius.mul(0.3)).div(u.radius.mul(u.spectroHeight).max(0.001)));
     const specHue = mix(vec3(0.1, 0.4, 1.0), vec3(1.0, 0.25, 0.55), specFreq); // blue → magenta
     const specCol = specHue.mul(baseBright.mul(1.3)).add(vec3(1.0, 0.9, 0.7).mul(pow(specAmp, 2.0).mul(0.06)));
-    color = mix(color, specCol, step(34.5, u.motion));
+    color = mix(color, specCol, step(37.5, u.motion));
 
     col.assign(color);
   })().compute(count);

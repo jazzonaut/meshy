@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, AUDIO_RESPONSE, SPECTRO_MODE, type FieldParams, type MorphShape } from '../field';
+import { ParticleField, generateMorphTarget, DEFAULT_PARAMS, MOTION_PRESETS, MOTION_MODES, AUDIO_RESPONSE, FIRST_AUDIO_MODE, type FieldParams, type MorphShape } from '../field';
 import { createRenderer } from './createRenderer';
 import { Stage } from './Stage';
 import { Controls } from './Controls';
@@ -251,17 +251,21 @@ export class App {
   }
 
   /**
-   * Per-frame audio pump. Feeds the Spectrogram Waterfall its newest FFT row (only
-   * when that mode is active, to skip the upload otherwise) and modulates a few
-   * look uniforms by the live bands so ANY preset reacts to sound. The modulation
-   * recomputes from `params` each frame, so it's non-destructive — toggling the mic
-   * off restores the slider values (see {@link restoreAudioUniforms}).
+   * Per-frame audio pump. Feeds the audio modes their newest FFT row (only when one
+   * is active, to skip the upload otherwise) and modulates look + motion uniforms by
+   * the live bands so ANY preset reacts to sound. The modulation recomputes from
+   * `params` each frame, so it's non-destructive — toggling the mic off restores the
+   * slider values (see {@link restoreAudioUniforms}).
    */
   private updateAudio() {
     if (!this.audio.enabled) return;
     this.audio.setGain(this.params.audioGain);
     this.audio.update();
-    if (this.field.uniforms.motion.value === SPECTRO_MODE) {
+    // Any audio mode needs the live FFT: push the newest row (which also flags the
+    // mic active, so the audio modes show the live signal instead of their idle
+    // animation). Spectrogram reads the scrolling history; Rings/Bars read the newest
+    // row; Bass Bloom only needs the active flag + the bands set below.
+    if (this.field.uniforms.motion.value >= FIRST_AUDIO_MODE) {
       this.field.pushAudioRow(this.audio.spectrum);
     }
     const { bass, mid, treble, level } = this.audio.bands;

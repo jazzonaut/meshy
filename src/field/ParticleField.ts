@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, SPECTRO_MODE, SPECTRO_W, SPECTRO_D, SPECTRO_CELLS, colorIsDynamic, type FieldParams } from './config';
+import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, FIRST_AUDIO_MODE, SLIME_MODE, SPECTRO_MODE, SPECTRO_W, SPECTRO_D, SPECTRO_CELLS, colorIsDynamic, type FieldParams } from './config';
 import { createUniforms, type FieldUniforms } from './uniforms';
 import { createBuffers, disposeBuffers, type FieldBuffers } from './buffers';
 import { createContext } from './context';
@@ -9,6 +9,7 @@ import { createPerParticleKernel } from './kernels/perParticle';
 import { createFlockKernels } from './kernels/flock';
 import { createSlimeKernels } from './kernels/slime';
 import { createSpectrogramKernel } from './kernels/spectrogram';
+import { createAudioModesKernel } from './kernels/audioModes';
 import { createConstellationKernel } from './kernels/constellation';
 import { createConstellationDots } from './lines';
 import { createParticleMaterial, type BlendMode } from './material';
@@ -49,6 +50,7 @@ export class ParticleField {
   private _kFlock?: ReturnType<typeof createFlockKernels>;
   private _kSlime?: ReturnType<typeof createSlimeKernels>;
   private _kSpectro?: ReturnType<typeof createSpectrogramKernel>;
+  private _kAudio?: ReturnType<typeof createAudioModesKernel>;
   private _kConstellation?: ReturnType<typeof createConstellationKernel>;
 
   private speed: number;
@@ -111,6 +113,9 @@ export class ParticleField {
   private get kSpectro() {
     return (this._kSpectro ??= createSpectrogramKernel(this.ctx, this.count));
   }
+  private get kAudio() {
+    return (this._kAudio ??= createAudioModesKernel(this.ctx, this.count));
+  }
   private get kConstellation() {
     return (this._kConstellation ??= createConstellationKernel(this.ctx));
   }
@@ -135,8 +140,8 @@ export class ParticleField {
   async warmupMotion() {
     const c = this.renderer;
     const motion = this.uniforms.motion.value;
-    if (motion === SPECTRO_MODE) {
-      await c.computeAsync(this.kSpectro);
+    if (motion >= FIRST_AUDIO_MODE) {
+      await c.computeAsync(motion === SPECTRO_MODE ? this.kSpectro : this.kAudio);
     } else if (motion === SLIME_MODE) {
       await c.computeAsync(this.kSlime.deposit);
       await c.computeAsync(this.kSlime.diffuse);
@@ -189,9 +194,10 @@ export class ParticleField {
     this.uniforms.time.value = this.simTime;
 
     const motion = this.uniforms.motion.value;
-    if (motion === SPECTRO_MODE) {
-      // Spectrogram Waterfall: ease particles onto the live FFT terrain.
-      this.renderer.compute(this.kSpectro);
+    if (motion >= FIRST_AUDIO_MODE) {
+      // Audio instrument modes: ease particles onto the live mic-driven layout.
+      // Spectrogram keeps its own ring-buffer terrain kernel; the rest share one.
+      this.renderer.compute(motion === SPECTRO_MODE ? this.kSpectro : this.kAudio);
     } else if (motion === SLIME_MODE) {
       // Physarum: deposit trail → diffuse/decay the field → sense & crawl.
       this.renderer.compute(this.kSlime.deposit);
@@ -303,7 +309,9 @@ export class ParticleField {
    */
   private buildLinks() {
     const motion = this.uniforms.motion.value;
-    const flockGridReady = motion >= FIRST_GPU_MODE && motion !== SLIME_MODE && motion !== SPECTRO_MODE;
+    // Only the flock force modes (Boids…Crystallize) rebuild the grid each frame;
+    // Slime, the audio modes and Spectrogram leave it idle, so populate it first.
+    const flockGridReady = motion >= FIRST_GPU_MODE && motion < SLIME_MODE;
     if (!flockGridReady) {
       this.renderer.compute(this.kFlock.gridClear);
       this.renderer.compute(this.kFlock.gridPopulate);

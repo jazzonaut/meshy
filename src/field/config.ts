@@ -37,6 +37,9 @@ export const MOTION_MODES = [
   'Liquid Droplets (GPU)',
   'Crystallize (GPU)',
   'Slime Mold (GPU)',
+  'Frequency Rings',
+  'Bass Bloom',
+  'Spectrum Bars',
   'Spectrogram Waterfall',
 ] as const;
 
@@ -100,7 +103,7 @@ export const MOTION_GROUPS: readonly MotionGroup[] = [
   },
   {
     label: 'Audio',
-    modes: ['Spectrogram Waterfall'],
+    modes: ['Frequency Rings', 'Bass Bloom', 'Spectrum Bars', 'Spectrogram Waterfall'],
   },
 ] as const;
 
@@ -132,12 +135,22 @@ export const DROPLET_MODE = MOTION_MODES.indexOf('Liquid Droplets (GPU)');
 export const CRYSTAL_MODE = MOTION_MODES.indexOf('Crystallize (GPU)');
 export const SLIME_MODE = MOTION_MODES.indexOf('Slime Mold (GPU)');
 /**
- * Spectrogram Waterfall — a microphone-driven 3D FFT terrain. Like Slime, it's
- * special-cased in the update routing (checked before the `>= FIRST_GPU_MODE`
- * flock range) since it has its own single-pass kernel and reads the audio buffer
- * rather than the hash grid.
+ * Microphone "instrument" modes. These sit past the flock range and are routed as a
+ * block before it (see {@link FIRST_AUDIO_MODE}). Frequency Rings / Bass Bloom /
+ * Spectrum Bars share one positional kernel (kernels/audioModes.ts); the Spectrogram
+ * Waterfall keeps its own kernel + ring-buffer terrain. All read the live mic.
  */
+export const RINGS_MODE = MOTION_MODES.indexOf('Frequency Rings');
+export const BLOOM_MODE = MOTION_MODES.indexOf('Bass Bloom');
+export const BARS_MODE = MOTION_MODES.indexOf('Spectrum Bars');
 export const SPECTRO_MODE = MOTION_MODES.indexOf('Spectrogram Waterfall');
+/**
+ * First audio mode. Every mode at or beyond this index is microphone-driven and
+ * positional (it eases particles onto a layout instead of integrating forces), so
+ * {@link ParticleField.update} routes the whole block before the flock/slime/force
+ * branches. Spectrogram Waterfall is the only one with a separate kernel.
+ */
+export const FIRST_AUDIO_MODE = RINGS_MODE;
 export const FIRST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Lorenz Drift');
 export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Thomas Tangle');
 /** Modes at or beyond this index use a GPU multi-pass pipeline. */
@@ -332,7 +345,12 @@ export const AUDIO_RESPONSE: AudioResponse[] = [
   { pulse: 0.8, swirl: 0.3, jitter: 0.7, lift: 0.5 }, // 32 Liquid Droplets (GPU)
   { pulse: 0.3, swirl: 0.2, jitter: 0.6, lift: 0.2 }, // 33 Crystallize (GPU)
   { pulse: 0.3, swirl: 0.4, jitter: 0.8, lift: 0.3 }, // 34 Slime Mold (GPU)
-  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 35 Spectrogram Waterfall (already audio-driven)
+  // Audio instrument modes drive their motion inside their own kernel, not via the
+  // shared applyAudio force, so the response weights are unused (kept 0).
+  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 35 Frequency Rings
+  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 36 Bass Bloom
+  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 37 Spectrum Bars
+  { pulse: 0.0, swirl: 0.0, jitter: 0.0, lift: 0.0 }, // 38 Spectrogram Waterfall (already audio-driven)
 ];
 
 export const DEFAULT_PARAMS: FieldParams = {
@@ -417,8 +435,14 @@ export const MOTION_PRESETS: MotionPreset[] = [
   // Slime Mold: moderate speed; flowScale/timeSpeed drive the wander curl; spring
   // is boundary containment; damping is drag. flowStrength unused (slimeWander instead).
   { speed: 1.6, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.05, spring: 1.2, damping: 0.9 },
+  // Audio instrument modes: speed scales how fast particles ease onto the live
+  // layout; timeSpeed drives the idle animation shown before the mic is enabled.
+  // flow/spring/damping are unused by these positional modes but kept finite.
+  { speed: 4.0, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.08, spring: 0.0, damping: 0.9 }, // 35 Frequency Rings
+  { speed: 3.5, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.06, spring: 0.0, damping: 0.9 }, // 36 Bass Bloom
+  { speed: 4.5, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.09, spring: 0.0, damping: 0.9 }, // 37 Spectrum Bars
   // Spectrogram Waterfall: speed scales how fast particles ease onto the terrain;
   // timeSpeed drives the gentle idle ripple shown before the mic is enabled.
   // flow/spring/damping are unused by this mode but kept finite for the seam test.
-  { speed: 4.0, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.08, spring: 0.0, damping: 0.9 },
+  { speed: 4.0, flowStrength: 0.0, flowScale: 0.06, timeSpeed: 0.08, spring: 0.0, damping: 0.9 }, // 38 Spectrogram Waterfall
 ];

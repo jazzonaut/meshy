@@ -10,9 +10,10 @@ export interface AudioBands {
 /**
  * Microphone audio source for the visualiser. Wraps getUserMedia + a Web Audio
  * AnalyserNode and exposes, per frame, a downsampled `spectrum` (SPECTRO_W bins,
- * normalised 0..1 — fed to the Spectrogram Waterfall mode) and aggregate `bands`
- * (bass/mid/treble/level — used for the global audio-reactive modulation that works
- * on any preset).
+ * normalised 0..1 — fed to the spectrum-reading audio modes: Frequency Rings,
+ * Spectrum Bars and the Spectrogram Waterfall) and aggregate `bands`
+ * (bass/mid/treble/level — used for Bass Bloom and the global audio-reactive
+ * modulation that works on any preset).
  *
  * Enabling is an explicit, gesture-driven action: it prompts for mic permission and
  * resumes the AudioContext (required on iOS Safari, which starts contexts

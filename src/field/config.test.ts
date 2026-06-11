@@ -12,6 +12,10 @@ import {
   CRYSTAL_MODE,
   SLIME_MODE,
   SPECTRO_MODE,
+  RINGS_MODE,
+  BLOOM_MODE,
+  BARS_MODE,
+  FIRST_AUDIO_MODE,
   FIRST_EXPERIMENTAL_MODE,
   LAST_EXPERIMENTAL_MODE,
   FIRST_GPU_MODE,
@@ -96,6 +100,16 @@ describe('mode-index constants', () => {
     expect(SPECTRO_MODE).toBeGreaterThan(CRYSTAL_MODE);
     expect(SPECTRO_MODE).toBe(MOTION_MODES.length - 1); // Spectrogram is the last mode
     expect(SPECTRO_MODE).not.toBe(SLIME_MODE);
+  });
+
+  it('routes the audio instrument modes as a contiguous block past the flock range', () => {
+    // ParticleField.update() routes `motion >= FIRST_AUDIO_MODE` before the slime /
+    // flock branches, so the audio block must sit above them and run to the end of
+    // the list (Spectrogram closing it). Rings/Bloom/Bars share one kernel; the last
+    // index is Spectrogram's own.
+    expect(FIRST_AUDIO_MODE).toBe(RINGS_MODE);
+    expect(FIRST_AUDIO_MODE).toBeGreaterThan(SLIME_MODE);
+    expect([BLOOM_MODE, BARS_MODE, SPECTRO_MODE]).toEqual([RINGS_MODE + 1, RINGS_MODE + 2, RINGS_MODE + 3]);
   });
 });
 
