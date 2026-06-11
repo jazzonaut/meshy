@@ -90,18 +90,21 @@ onUnmounted(() => document.removeEventListener('fullscreenchange', syncFullscree
         class="w-32 shrink-0"
         @update:model-value="setPointer"
       />
+      <Button
+        size="small"
+        :severity="c.audioState.enabled ? 'success' : 'secondary'"
+        :text="!c.audioState.enabled"
+        class="h-8 w-8 shrink-0 !p-0 text-base"
+        :aria-label="c.audioState.enabled ? 'Microphone live — tap to stop' : 'React to sound from the microphone'"
+        :title="c.audioState.enabled ? 'Microphone live — tap to stop' : 'React to sound from the microphone'"
+        @click="toggleMic"
+      >
+        <span aria-hidden="true">🎤</span>
+      </Button>
     </div>
 
     <div class="flex flex-wrap items-center gap-1.5">
       <PresetBar />
-      <Button
-        :label="c.audioState.enabled ? '🎤 On' : '🎤 Mic'"
-        size="small"
-        :severity="c.audioState.enabled ? 'success' : 'secondary'"
-        :text="!c.audioState.enabled"
-        :title="c.audioState.enabled ? 'Microphone live — tap to stop' : 'React to sound from the microphone'"
-        @click="toggleMic"
-      />
       <Button label="Share" size="small" severity="secondary" text @click="share" />
       <Button label="Studio" size="small" severity="secondary" @click="studioOpen = true" />
     </div>
