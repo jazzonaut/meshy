@@ -26,6 +26,7 @@ export class ParticleField {
   private readonly material: THREE.SpriteNodeMaterial;
   private readonly setMaterialStyleImpl: (style: number) => void;
   private readonly setBlendModeImpl: (mode: BlendMode) => void;
+  private readonly setDepthWriteImpl: (on: boolean) => void;
 
   private readonly kInit: ReturnType<typeof createInitKernel>;
   private readonly kColor: ReturnType<typeof createColorKernel>;
@@ -57,6 +58,7 @@ export class ParticleField {
     this.material = mat.material;
     this.setMaterialStyleImpl = mat.setMaterialStyle;
     this.setBlendModeImpl = mat.setBlendMode;
+    this.setDepthWriteImpl = mat.setDepthWrite;
 
     const sprites = new THREE.Sprite(this.material);
     (sprites as any).count = count;
@@ -147,6 +149,11 @@ export class ParticleField {
 
   setMaterialStyle(style: number) {
     this.setMaterialStyleImpl(style);
+  }
+
+  /** Force particles to write depth (so depth-of-field can read per-pixel viewZ). */
+  setDepthWrite(on: boolean) {
+    this.setDepthWriteImpl(on);
   }
 
   /** Global multiplier on simulation speed (0 = paused). */

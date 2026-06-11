@@ -79,6 +79,9 @@ export class App {
     });
     this.pointer = new PointerTracker(renderer.domElement, this.stage.camera, this.stage.scene, () => this.field);
     this.post = createPostprocessing(renderer, this.stage.scene, this.stage.camera);
+    // Depth-of-field reads the depth buffer, which additive particles don't write
+    // by default — flip depth-write on the current field whenever DoF is active.
+    this.post.onDofActiveChange = (active) => this.field.setDepthWrite(active);
     this.capture = new Capture(renderer.domElement as HTMLCanvasElement);
     this.applyPointerForce();
     // Gate morph at startup: morphAmount defaults to 1, but with no shape selected
@@ -193,6 +196,7 @@ export class App {
     this.applyPointerForce(); // re-apply onto the new field's uniforms
     this.applyMorphTarget(); // the new field's targets buffer starts empty
     this.applyMorphUniforms();
+    if (this.post.dofBokeh.value > 0) this.field.setDepthWrite(true); // DoF still on
   }
 
   /** Re-sample the active shape into the field's morph-target buffer. */
@@ -344,6 +348,11 @@ export class App {
     u.slimeDecay.value = this.params.slimeDecay;
     u.size.value = this.params.size;
     u.exposure.value = this.params.exposure;
+    u.softness.value = this.params.softness;
+    u.coreGlow.value = this.params.coreGlow;
+    u.streak.value = this.params.streak;
+    u.fogDensity.value = this.params.fogDensity;
+    u.fog.value.set(this.params.fogColor);
     u.warm.value.set(this.params.warmColor);
     u.cool.value.set(this.params.coolColor);
     // radius / warp* are init-pass inputs — applied via regenerate() when they change.

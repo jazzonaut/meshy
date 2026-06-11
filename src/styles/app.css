@@ -43,7 +43,14 @@
 .p-drawer .p-drawer-content {
   background: transparent;
 }
-/* Lighten the drawer's modal scrim so the scene still reads behind the panel. */
+/* The Studio drawer is non-modal (:modal="false"): PrimeVue still renders a
+ * full-screen .p-drawer-mask wrapper, so keep it fully transparent and click-
+ * through. Otherwise it tints/dims the canvas the whole time the panel is open.
+ * The panel itself re-enables pointer events so it stays usable. */
 .p-drawer-mask {
-  background: rgb(0 0 0 / 0.25);
+  background: transparent;
+  pointer-events: none;
+}
+.p-drawer-mask .p-drawer {
+  pointer-events: auto;
 }

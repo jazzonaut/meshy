@@ -17,21 +17,21 @@ export const MOTION_MODES = [
   'Black Hole Accretion',
   'Flocking Swarm',
   'Ash Fall',
-  'Prism Lattice',
-  'Rose Knot',
-  'Lissajous Ribbons',
+  'Lorenz Drift',
+  'Aizawa Orbit',
+  'Cymatic Plate',
   'Kaleidoscope Fold',
-  'Magnetic Trefoil',
-  'Signal Weave',
-  'Neon Raceway',
-  'Origami Bloom',
-  'Helix Conveyor',
-  'Torus Flux',
-  'Polyhedral Orbit',
+  'Vortex Ring',
+  'Interference Lattice',
+  'Slipstream',
+  'Phyllotaxis Sphere',
+  'Möbius Band',
+  'Harmonic Bloom',
+  'Gravity Wells',
   'Spiral Staircase',
-  'Faultline Mandala',
-  'Time Loom',
-  'Storm Glyphs',
+  'Tesseract',
+  'Magnetosphere',
+  'Thomas Tangle',
   'Boids Flock (GPU)',
   'Predator Scatter (GPU)',
   'Liquid Droplets (GPU)',
@@ -70,21 +70,21 @@ export const MOTION_GROUPS: readonly MotionGroup[] = [
   {
     label: 'Experimental',
     modes: [
-      'Prism Lattice',
-      'Rose Knot',
-      'Lissajous Ribbons',
+      'Aizawa Orbit',
+      'Cymatic Plate',
+      'Gravity Wells',
+      'Harmonic Bloom',
+      'Interference Lattice',
       'Kaleidoscope Fold',
-      'Magnetic Trefoil',
-      'Signal Weave',
-      'Neon Raceway',
-      'Origami Bloom',
-      'Helix Conveyor',
-      'Torus Flux',
-      'Polyhedral Orbit',
+      'Lorenz Drift',
+      'Magnetosphere',
+      'Möbius Band',
+      'Phyllotaxis Sphere',
+      'Slipstream',
       'Spiral Staircase',
-      'Faultline Mandala',
-      'Time Loom',
-      'Storm Glyphs',
+      'Tesseract',
+      'Thomas Tangle',
+      'Vortex Ring',
     ],
   },
   {
@@ -126,8 +126,8 @@ export const PREDATOR_MODE = MOTION_MODES.indexOf('Predator Scatter (GPU)');
 export const DROPLET_MODE = MOTION_MODES.indexOf('Liquid Droplets (GPU)');
 export const CRYSTAL_MODE = MOTION_MODES.indexOf('Crystallize (GPU)');
 export const SLIME_MODE = MOTION_MODES.indexOf('Slime Mold (GPU)');
-export const FIRST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Prism Lattice');
-export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Storm Glyphs');
+export const FIRST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Lorenz Drift');
+export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Thomas Tangle');
 /** Modes at or beyond this index use a GPU multi-pass pipeline. */
 export const FIRST_GPU_MODE = BOIDS_MODE;
 
@@ -186,6 +186,11 @@ export interface FieldParams {
   // Look (live)
   size: number;
   exposure: number;
+  softness: number; // sprite falloff: low = broad haze, high = tight mote
+  coreGlow: number; // 0 = flat tint, 1 = white-hot center that blows out under bloom
+  streak: number; // velocity stretch: 0 = round, higher = comet streaks along motion
+  fogDensity: number; // depth fade: 0 = off, higher = far particles recede into the void
+  fogColor: THREE.ColorRepresentation; // colour distant particles fade toward
   warmColor: THREE.ColorRepresentation;
   coolColor: THREE.ColorRepresentation;
   materialStyle: number;
@@ -220,8 +225,13 @@ export const DEFAULT_PARAMS: FieldParams = {
   slimeDecay: 0.9,
   morphAmount: 1,
   morphStrength: 12,
-  size: 0.085,
-  exposure: 0.4,
+  size: 0.06,
+  exposure: 1,
+  softness: 1.4,
+  coreGlow: 0,
+  streak: 0,
+  fogDensity: 0,
+  fogColor: '#060912',
   warmColor: '#e8581f',
   coolColor: '#6fa8ff',
   materialStyle: 0,
@@ -244,22 +254,22 @@ export const MOTION_PRESETS: MotionPreset[] = [
   { speed: 4.5, flowStrength: 1.4, flowScale: 0.08, timeSpeed: 0.07, spring: 0.25, damping: 0.94 },
   { speed: 5.0, flowStrength: 1.3, flowScale: 0.09, timeSpeed: 0.1, spring: 0.45, damping: 0.94 },
   { speed: 3.5, flowStrength: 1.0, flowScale: 0.13, timeSpeed: 0.05, spring: 0.6, damping: 0.96 },
-  // Experimental single-pass modes.
-  { speed: 3.0, flowStrength: 2.0, flowScale: 0.07, timeSpeed: 0.08, spring: 1.25, damping: 0.91 },
-  { speed: 3.7, flowStrength: 2.2, flowScale: 0.09, timeSpeed: 0.09, spring: 0.95, damping: 0.90 },
-  { speed: 3.4, flowStrength: 2.4, flowScale: 0.08, timeSpeed: 0.10, spring: 1.05, damping: 0.90 },
-  { speed: 2.8, flowStrength: 1.9, flowScale: 0.06, timeSpeed: 0.07, spring: 1.35, damping: 0.92 },
-  { speed: 3.5, flowStrength: 2.4, flowScale: 0.08, timeSpeed: 0.08, spring: 0.85, damping: 0.91 },
-  { speed: 3.2, flowStrength: 2.1, flowScale: 0.08, timeSpeed: 0.11, spring: 1.15, damping: 0.90 },
-  { speed: 4.4, flowStrength: 2.6, flowScale: 0.10, timeSpeed: 0.13, spring: 0.80, damping: 0.88 },
-  { speed: 2.7, flowStrength: 1.8, flowScale: 0.05, timeSpeed: 0.06, spring: 1.45, damping: 0.92 },
-  { speed: 3.8, flowStrength: 2.3, flowScale: 0.08, timeSpeed: 0.10, spring: 1.00, damping: 0.90 },
-  { speed: 3.6, flowStrength: 2.5, flowScale: 0.09, timeSpeed: 0.10, spring: 0.95, damping: 0.89 },
-  { speed: 3.1, flowStrength: 2.0, flowScale: 0.06, timeSpeed: 0.07, spring: 1.30, damping: 0.92 },
-  { speed: 3.3, flowStrength: 2.2, flowScale: 0.07, timeSpeed: 0.09, spring: 1.10, damping: 0.90 },
-  { speed: 3.5, flowStrength: 2.4, flowScale: 0.08, timeSpeed: 0.10, spring: 0.95, damping: 0.89 },
-  { speed: 3.2, flowStrength: 2.0, flowScale: 0.06, timeSpeed: 0.08, spring: 1.20, damping: 0.91 },
-  { speed: 3.9, flowStrength: 2.5, flowScale: 0.10, timeSpeed: 0.12, spring: 0.90, damping: 0.89 },
+  // Experimental single-pass modes (15–29).
+  { speed: 3.0, flowStrength: 2.0, flowScale: 0.06, timeSpeed: 0.08, spring: 0.6, damping: 0.90 }, // 15 Lorenz Drift
+  { speed: 3.0, flowStrength: 1.8, flowScale: 0.06, timeSpeed: 0.07, spring: 0.6, damping: 0.90 }, // 16 Aizawa Orbit
+  { speed: 2.5, flowStrength: 1.5, flowScale: 0.06, timeSpeed: 0.05, spring: 1.0, damping: 0.85 }, // 17 Cymatic Plate
+  { speed: 2.8, flowStrength: 1.9, flowScale: 0.06, timeSpeed: 0.07, spring: 1.35, damping: 0.92 }, // 18 Kaleidoscope Fold
+  { speed: 2.8, flowStrength: 1.6, flowScale: 0.06, timeSpeed: 0.08, spring: 1.0, damping: 0.90 }, // 19 Vortex Ring
+  { speed: 2.5, flowStrength: 1.8, flowScale: 0.06, timeSpeed: 0.06, spring: 0.8, damping: 0.88 }, // 20 Interference Lattice
+  { speed: 4.0, flowStrength: 2.4, flowScale: 0.09, timeSpeed: 0.10, spring: 0.8, damping: 0.94 }, // 21 Slipstream
+  { speed: 2.5, flowStrength: 1.0, flowScale: 0.06, timeSpeed: 0.08, spring: 1.2, damping: 0.90 }, // 22 Phyllotaxis Sphere
+  { speed: 2.8, flowStrength: 1.4, flowScale: 0.06, timeSpeed: 0.07, spring: 1.1, damping: 0.90 }, // 23 Möbius Band
+  { speed: 2.5, flowStrength: 1.0, flowScale: 0.06, timeSpeed: 0.07, spring: 1.2, damping: 0.90 }, // 24 Harmonic Bloom
+  { speed: 3.0, flowStrength: 1.6, flowScale: 0.06, timeSpeed: 0.10, spring: 0.7, damping: 0.92 }, // 25 Gravity Wells
+  { speed: 3.3, flowStrength: 2.2, flowScale: 0.07, timeSpeed: 0.09, spring: 1.10, damping: 0.90 }, // 26 Spiral Staircase
+  { speed: 2.6, flowStrength: 1.0, flowScale: 0.06, timeSpeed: 0.09, spring: 1.2, damping: 0.90 }, // 27 Tesseract
+  { speed: 2.8, flowStrength: 1.8, flowScale: 0.06, timeSpeed: 0.07, spring: 0.8, damping: 0.91 }, // 28 Magnetosphere
+  { speed: 3.0, flowStrength: 1.9, flowScale: 0.06, timeSpeed: 0.07, spring: 0.6, damping: 0.90 }, // 29 Thomas Tangle
   // Boids: flowStrength/flowScale/timeSpeed drive the shared "wind" curl field;
   // spring is the boundary-containment stiffness; damping is drag.
   { speed: 2.2, flowStrength: 2.2, flowScale: 0.07, timeSpeed: 0.06, spring: 1.3, damping: 0.95 },

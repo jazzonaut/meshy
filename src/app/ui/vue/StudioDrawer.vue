@@ -60,6 +60,10 @@ function setCool(v: string) {
   f().uniforms.cool.value.set(v);
   f().recolor();
 }
+function setFog(v: string) {
+  p.fogColor = v;
+  f().uniforms.fog.value.set(v);
+}
 function setPerception(v: number) {
   const u = f().uniforms;
   u.boidPerception.value = v;
@@ -73,6 +77,8 @@ function setPerception(v: number) {
     v-model:visible="visible"
     position="right"
     header="Studio"
+    :modal="false"
+    :dismissable-mask="false"
     class="!w-[330px] !max-w-[90vw]"
   >
     <Accordion>
@@ -188,6 +194,9 @@ function setPerception(v: number) {
           </div>
           <SliderRow label="size" :min="0.01" :max="1.5" :step="0.005" v-model="p.size" @input="(v) => (f().uniforms.size.value = v)" />
           <SliderRow label="exposure" :min="0.02" :max="2" :step="0.01" v-model="p.exposure" @input="(v) => (f().uniforms.exposure.value = v)" />
+          <SliderRow label="softness (haze ↔ mote)" :min="0.3" :max="4" :step="0.05" v-model="p.softness" @input="(v) => (f().uniforms.softness.value = v)" />
+          <SliderRow label="hot core" :min="0" :max="1" :step="0.01" v-model="p.coreGlow" @input="(v) => (f().uniforms.coreGlow.value = v)" />
+          <SliderRow label="streak (motion)" :min="0" :max="0.6" :step="0.005" v-model="p.streak" @input="(v) => (f().uniforms.streak.value = v)" />
           <ColorRow label="warm" :model-value="(p.warmColor as string)" @update:model-value="setWarm" />
           <ColorRow label="cool" :model-value="(p.coolColor as string)" @update:model-value="setCool" />
         </AccordionContent>
@@ -214,6 +223,25 @@ function setPerception(v: number) {
           <SliderRow label="bloom radius" :min="0" :max="1" :step="0.01" v-model="c.post.bloomPass.radius.value" />
           <SliderRow label="bloom threshold" :min="0" :max="1" :step="0.01" v-model="c.post.bloomPass.threshold.value" />
           <SliderRow label="trails (long exposure)" :min="0" :max="0.96" :step="0.01" v-model="c.post.trailDamp.value" @input="(v) => c.post.setTrails(v)" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- Lens & Grade ----------------------------------------------------- -->
+      <AccordionPanel value="lens">
+        <AccordionHeader>Lens &amp; Grade</AccordionHeader>
+        <AccordionContent>
+          <p class="pb-1 text-[11px] leading-snug text-surface-500">
+            Depth-of-field & chromatic aberration are off at 0 (DoF is the costliest
+            effect). Fog, vignette & dither frame the image cheaply.
+          </p>
+          <SliderRow label="bokeh (depth-of-field)" :min="0" :max="8" :step="0.05" v-model="c.post.dofBokeh.value" @input="(v) => c.post.setDofBokeh(v)" />
+          <SliderRow label="focus distance" :min="5" :max="160" :step="0.5" v-model="c.post.dofFocus.value" />
+          <SliderRow label="focus range" :min="2" :max="120" :step="0.5" v-model="c.post.dofRange.value" />
+          <SliderRow label="chromatic aberration" :min="0" :max="4" :step="0.02" v-model="c.post.caStrength.value" @input="(v) => c.post.setCa(v)" />
+          <SliderRow label="vignette" :min="0" :max="1.2" :step="0.01" v-model="c.post.vignette.value" />
+          <SliderRow label="dither (anti-banding)" :min="0" :max="3" :step="0.05" v-model="c.post.ditherAmt.value" />
+          <SliderRow label="depth fog" :min="0" :max="0.06" :step="0.0005" v-model="p.fogDensity" @input="(v) => (f().uniforms.fogDensity.value = v)" />
+          <ColorRow label="fog colour" :model-value="(p.fogColor as string)" @update:model-value="setFog" />
         </AccordionContent>
       </AccordionPanel>
 
