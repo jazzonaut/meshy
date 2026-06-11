@@ -17,11 +17,86 @@ export const MOTION_MODES = [
   'Black Hole Accretion',
   'Flocking Swarm',
   'Ash Fall',
+  'Data Sonar',
+  'Dream Glitch',
+  'Ecosystem',
+  'Gravity Lens',
+  'Magnetic Sculptor',
+  'Memory Field',
+  'Neural Firing',
+  'Origami Fold',
+  'Plasma Globe',
+  'Quantum Foam',
+  'Ritual Circle',
+  'Swarm Architecture',
+  'Tectonic Plates',
+  'Time Echo',
+  'Weather System',
   'Boids Flock (GPU)',
   'Predator Scatter (GPU)',
   'Liquid Droplets (GPU)',
   'Crystallize (GPU)',
   'Slime Mold (GPU)',
+] as const;
+
+export type MotionMode = (typeof MOTION_MODES)[number];
+
+export interface MotionGroup {
+  label: string;
+  modes: readonly MotionMode[];
+}
+
+export const MOTION_GROUPS: readonly MotionGroup[] = [
+  {
+    label: 'Classic',
+    modes: [
+      'Ambient Curl',
+      'Ash Fall',
+      'Black Hole Accretion',
+      'Breathing Nebula',
+      'Color Sorting',
+      'Convection (color)',
+      'Dual Attractors (color)',
+      'Electric Arcs',
+      'Flocking Swarm',
+      'Galactic Vortex',
+      'Implosion / Supernova',
+      'Magnetic Field Lines',
+      'Orbital Shells',
+      'Pulse Waves',
+      'Tornado Column',
+    ],
+  },
+  {
+    label: 'Experimental',
+    modes: [
+      'Data Sonar',
+      'Dream Glitch',
+      'Ecosystem',
+      'Gravity Lens',
+      'Magnetic Sculptor',
+      'Memory Field',
+      'Neural Firing',
+      'Origami Fold',
+      'Plasma Globe',
+      'Quantum Foam',
+      'Ritual Circle',
+      'Swarm Architecture',
+      'Tectonic Plates',
+      'Time Echo',
+      'Weather System',
+    ],
+  },
+  {
+    label: 'Emergent GPU',
+    modes: [
+      'Boids Flock (GPU)',
+      'Crystallize (GPU)',
+      'Liquid Droplets (GPU)',
+      'Predator Scatter (GPU)',
+      'Slime Mold (GPU)',
+    ],
+  },
 ] as const;
 
 /** Render material styles — index matches the `materialStyle` uniform. */
@@ -51,6 +126,8 @@ export const PREDATOR_MODE = MOTION_MODES.indexOf('Predator Scatter (GPU)');
 export const DROPLET_MODE = MOTION_MODES.indexOf('Liquid Droplets (GPU)');
 export const CRYSTAL_MODE = MOTION_MODES.indexOf('Crystallize (GPU)');
 export const SLIME_MODE = MOTION_MODES.indexOf('Slime Mold (GPU)');
+export const FIRST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Data Sonar');
+export const LAST_EXPERIMENTAL_MODE = MOTION_MODES.indexOf('Weather System');
 /** Modes at or beyond this index use a GPU multi-pass pipeline. */
 export const FIRST_GPU_MODE = BOIDS_MODE;
 
@@ -167,6 +244,22 @@ export const MOTION_PRESETS: MotionPreset[] = [
   { speed: 4.5, flowStrength: 1.4, flowScale: 0.08, timeSpeed: 0.07, spring: 0.25, damping: 0.94 },
   { speed: 5.0, flowStrength: 1.3, flowScale: 0.09, timeSpeed: 0.1, spring: 0.45, damping: 0.94 },
   { speed: 3.5, flowStrength: 1.0, flowScale: 0.13, timeSpeed: 0.05, spring: 0.6, damping: 0.96 },
+  // Experimental single-pass modes.
+  { speed: 3.2, flowStrength: 1.8, flowScale: 0.08, timeSpeed: 0.08, spring: 0.65, damping: 0.93 },
+  { speed: 4.0, flowStrength: 1.4, flowScale: 0.16, timeSpeed: 0.12, spring: 0.7, damping: 0.9 },
+  { speed: 2.6, flowStrength: 1.8, flowScale: 0.1, timeSpeed: 0.07, spring: 0.55, damping: 0.94 },
+  { speed: 3.0, flowStrength: 1.6, flowScale: 0.07, timeSpeed: 0.05, spring: 0.35, damping: 0.95 },
+  { speed: 3.2, flowStrength: 2.0, flowScale: 0.09, timeSpeed: 0.06, spring: 0.5, damping: 0.94 },
+  { speed: 2.8, flowStrength: 1.4, flowScale: 0.08, timeSpeed: 0.04, spring: 0.85, damping: 0.95 },
+  { speed: 3.8, flowStrength: 2.0, flowScale: 0.12, timeSpeed: 0.14, spring: 0.35, damping: 0.91 },
+  { speed: 2.8, flowStrength: 1.8, flowScale: 0.06, timeSpeed: 0.05, spring: 1.2, damping: 0.92 },
+  { speed: 4.0, flowStrength: 2.3, flowScale: 0.08, timeSpeed: 0.08, spring: 0.35, damping: 0.92 },
+  { speed: 4.2, flowStrength: 2.1, flowScale: 0.18, timeSpeed: 0.16, spring: 0.5, damping: 0.88 },
+  { speed: 3.2, flowStrength: 1.7, flowScale: 0.07, timeSpeed: 0.05, spring: 1.0, damping: 0.94 },
+  { speed: 2.5, flowStrength: 1.6, flowScale: 0.06, timeSpeed: 0.04, spring: 1.1, damping: 0.93 },
+  { speed: 2.7, flowStrength: 1.9, flowScale: 0.08, timeSpeed: 0.05, spring: 0.65, damping: 0.94 },
+  { speed: 3.4, flowStrength: 1.8, flowScale: 0.1, timeSpeed: 0.08, spring: 0.55, damping: 0.9 },
+  { speed: 3.5, flowStrength: 2.0, flowScale: 0.12, timeSpeed: 0.09, spring: 0.45, damping: 0.92 },
   // Boids: flowStrength/flowScale/timeSpeed drive the shared "wind" curl field;
   // spring is the boundary-containment stiffness; damping is drag.
   { speed: 2.2, flowStrength: 2.2, flowScale: 0.07, timeSpeed: 0.06, spring: 1.3, damping: 0.95 },

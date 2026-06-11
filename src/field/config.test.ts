@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   MOTION_MODES,
+  MOTION_GROUPS,
   MATERIAL_STYLES,
   MOTION_PRESETS,
   DEFAULT_PARAMS,
@@ -9,6 +10,8 @@ import {
   DROPLET_MODE,
   CRYSTAL_MODE,
   SLIME_MODE,
+  FIRST_EXPERIMENTAL_MODE,
+  LAST_EXPERIMENTAL_MODE,
   FIRST_GPU_MODE,
   type MotionPreset,
 } from './config';
@@ -34,6 +37,15 @@ describe('motion modes ↔ presets', () => {
   it('has no duplicate mode labels', () => {
     expect(new Set(MOTION_MODES).size).toBe(MOTION_MODES.length);
   });
+
+  it('puts every mode in exactly one picker group', () => {
+    const grouped = MOTION_GROUPS.flatMap((group) => group.modes);
+    expect(grouped).toHaveLength(MOTION_MODES.length);
+    expect(new Set(grouped).size).toBe(MOTION_MODES.length);
+    for (const mode of grouped) {
+      expect(MOTION_MODES).toContain(mode);
+    }
+  });
 });
 
 describe('mode-index constants', () => {
@@ -54,6 +66,12 @@ describe('mode-index constants', () => {
 
   it('starts the GPU pipeline range at the boids mode', () => {
     expect(FIRST_GPU_MODE).toBe(BOIDS_MODE);
+  });
+
+  it('keeps experimental modes contiguous before the GPU pipeline', () => {
+    expect(FIRST_EXPERIMENTAL_MODE).toBeGreaterThan(0);
+    expect(LAST_EXPERIMENTAL_MODE).toBe(FIRST_GPU_MODE - 1);
+    expect(MOTION_MODES.slice(FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE)).toHaveLength(15);
   });
 
   it('routes only Slime past the flock range (Slime is the last GPU mode)', () => {

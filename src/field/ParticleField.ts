@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { instanceIndex } from 'three/tsl';
-import { FIRST_GPU_MODE, SLIME_MODE, type FieldParams } from './config';
+import { FIRST_EXPERIMENTAL_MODE, FIRST_GPU_MODE, SLIME_MODE, type FieldParams } from './config';
 import { createUniforms, type FieldUniforms } from './uniforms';
 import { createBuffers, disposeBuffers, type FieldBuffers } from './buffers';
 import { createContext } from './context';
@@ -30,6 +30,7 @@ export class ParticleField {
   private readonly kInit: ReturnType<typeof createInitKernel>;
   private readonly kColor: ReturnType<typeof createColorKernel>;
   private readonly kPerParticle: ReturnType<typeof createPerParticleKernel>;
+  private readonly kExperimental: ReturnType<typeof createPerParticleKernel>;
   private readonly kFlock: ReturnType<typeof createFlockKernels>;
   private readonly kSlime: ReturnType<typeof createSlimeKernels>;
 
@@ -47,7 +48,8 @@ export class ParticleField {
 
     this.kInit = createInitKernel(ctx, count);
     this.kColor = createColorKernel(ctx, count);
-    this.kPerParticle = createPerParticleKernel(ctx, count);
+    this.kPerParticle = createPerParticleKernel(ctx, count, 'classic');
+    this.kExperimental = createPerParticleKernel(ctx, count, 'experimental');
     this.kFlock = createFlockKernels(ctx, count);
     this.kSlime = createSlimeKernels(ctx, count);
 
@@ -92,6 +94,8 @@ export class ParticleField {
       this.renderer.compute(this.kFlock.gridPopulate);
       this.renderer.compute(this.kFlock.force);
       this.renderer.compute(this.kFlock.integrate);
+    } else if (motion >= FIRST_EXPERIMENTAL_MODE) {
+      this.renderer.compute(this.kExperimental);
     } else {
       this.renderer.compute(this.kPerParticle);
     }

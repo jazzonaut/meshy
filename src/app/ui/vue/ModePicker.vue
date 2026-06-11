@@ -2,15 +2,20 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Button from 'primevue/button';
 import Listbox from 'primevue/listbox';
-import { MOTION_MODES } from '../../../field';
+import { MOTION_GROUPS, MOTION_MODES } from '../../../field';
 import { useController } from './useController';
 
 const c = useController();
 const open = ref(false);
 const isMobile = window.matchMedia('(max-width: 640px)');
 
-const options = MOTION_MODES
-  .map((label, value) => ({ label, value }))
+const options = MOTION_GROUPS
+  .map((group) => ({
+    label: group.label,
+    items: group.modes
+      .map((label) => ({ label, value: MOTION_MODES.indexOf(label) }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  }))
   .sort((a, b) => a.label.localeCompare(b.label));
 const currentLabel = computed(() => MOTION_MODES[c.params.motion]);
 
@@ -46,6 +51,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
       <Listbox
         :model-value="c.params.motion"
         :options="options"
+        option-group-label="label"
+        option-group-children="items"
         option-label="label"
         option-value="value"
         filter
