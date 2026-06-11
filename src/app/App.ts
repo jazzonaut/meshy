@@ -19,6 +19,11 @@ const COUNT_OPTIONS: Record<string, number> = {
   '1M': 1_000_000,
 };
 
+// An A/B cross-fade runs two fields at once, so cap the overlay (B) field's count
+// to keep the doubled per-frame simulation + build cost bounded even when the main
+// field is at 1M. The main field (A) keeps its own count.
+const BLEND_MAX_COUNT = 250_000;
+
 export interface AppOptions {
   /**
    * Wrap a shared UI-state object so a reactive framework (Vue) can observe it.
@@ -58,6 +63,10 @@ export class App {
   private blendActive = false;
   private blendKeyA?: string;
   private blendKeyB?: string;
+  // Bumped on every B rebuild so an async warmup that finishes after a newer change
+  // (or after the blend was cleared) can detect it's stale and discard itself.
+  private blendBuildToken = 0;
+  private lastBlendT = 0; // current fade position, re-applied when B swaps in
   private readonly stage = new Stage();
   private readonly controls: Controls;
   private readonly pointer: PointerTracker;
@@ -150,7 +159,7 @@ export class App {
         this.clearBlend();
         this.applyPreset(state);
       },
-      onBlendFields: (a, b, t) => this.setBlend(a, b, t),
+      onBlendFields: (a, b, t) => void this.setBlend(a, b, t),
     };
 
     // Reflect any hash-loaded state onto the engine bits that read it once.
@@ -305,34 +314,60 @@ export class App {
    * 1 = all B) via per-field opacity. Re-configures a side only when that preset
    * actually changes, so dragging the slider is just two opacity writes.
    */
-  private setBlend(a: SceneState, b: SceneState, t: number) {
+  private async setBlend(a: SceneState, b: SceneState, t: number) {
     const ka = JSON.stringify(a);
     const kb = JSON.stringify(b);
-    if (!this.blendActive || ka !== this.blendKeyA) {
-      this.applyPreset(a); // main field becomes preset A
-      this.blendKeyA = ka;
-    }
-    if (!this.blendActive || kb !== this.blendKeyB || !this.fieldB) {
-      this.rebuildFieldB(b);
-      this.blendKeyB = kb;
-    }
-    this.blendActive = true;
     const tt = Math.max(0, Math.min(1, t));
+    this.lastBlendT = tt;
+    this.blendActive = true;
+
+    // Side A changed → reconfigure the (live) main field. Cheap on the common
+    // same-count path; only a count change rebuilds it (existing applyPreset logic).
+    if (ka !== this.blendKeyA) {
+      this.blendKeyA = ka;
+      this.applyPreset(a);
+    }
     this.field.setOpacity(1 - tt);
-    this.fieldB?.setOpacity(tt);
+
+    // Slider-drag fast path: B unchanged (already built or still warming), so this
+    // is just opacity writes — lastBlendT above carries the position to the build if
+    // it's still in flight. Keyed on blendKeyB alone so dragging during the initial
+    // compile doesn't kick off redundant rebuilds.
+    if (kb === this.blendKeyB) {
+      this.fieldB?.setOpacity(tt);
+      return;
+    }
+    // Side B changed → build a fresh overlay field, warming its pipelines off the
+    // critical path so the dropdown change doesn't freeze the tab (see rebuildFieldB).
+    this.blendKeyB = kb;
+    await this.rebuildFieldB(b);
   }
 
-  /** Build (or rebuild) the overlay field for preset B. */
-  private rebuildFieldB(state: SceneState) {
-    if (this.fieldB) {
-      this.stage.scene.remove(this.fieldB.object);
-      this.fieldB.dispose();
-    }
+  /**
+   * Build (or rebuild) the overlay field for preset B. The new field's compute
+   * pipelines (init / colour / motion) are warmed via the async, non-blocking
+   * path BEFORE it is swapped into the scene — a freshly constructed field shares
+   * none of the main field's pre-compiled pipelines, so seeding it synchronously
+   * would compile WGSL on the main thread and freeze the tab. The previous overlay
+   * keeps rendering until the replacement is ready, and a build superseded while it
+   * compiles (newer change, or the blend was cleared) is discarded.
+   */
+  private async rebuildFieldB(state: SceneState) {
+    const token = ++this.blendBuildToken;
     const params = { ...DEFAULT_PARAMS, ...state.params };
-    const count = typeof state.count === 'number' ? state.count : this.count;
+    const count = Math.min(typeof state.count === 'number' ? state.count : this.count, BLEND_MAX_COUNT);
     const fb = new ParticleField(this.renderer, count, params);
     fb.setMaterialStyle(params.materialStyle);
-    fb.seed(); // structure + colour from B's params
+
+    try {
+      await fb.warmupSeed();
+      await fb.warmupColor();
+      await fb.warmupMotion();
+    } catch {
+      /* best-effort: fall back to lazy first-frame compilation if warmup fails */
+    }
+    fb.ensureSeeded(); // guarantee structure + colour even if warmup was interrupted
+
     if (state.morphShape && state.morphShape !== 'None') {
       const data = generateMorphTarget(state.morphShape, count, params.radius);
       if (data) fb.setMorphTarget(data);
@@ -340,6 +375,19 @@ export class App {
     } else {
       fb.uniforms.morphAmount.value = 0;
     }
+
+    // A newer rebuild superseded us, or the blend was cleared, while we compiled —
+    // throw this field away rather than swapping in a stale overlay.
+    if (token !== this.blendBuildToken || !this.blendActive) {
+      fb.dispose();
+      return;
+    }
+
+    if (this.fieldB) {
+      this.stage.scene.remove(this.fieldB.object);
+      this.fieldB.dispose();
+    }
+    fb.setOpacity(this.lastBlendT);
     this.stage.scene.add(fb.object);
     this.fieldB = fb;
   }
@@ -348,6 +396,7 @@ export class App {
   private clearBlend() {
     if (!this.blendActive) return;
     this.blendActive = false;
+    this.blendBuildToken++; // invalidate any overlay build still warming up
     this.blendKeyA = undefined;
     this.blendKeyB = undefined;
     this.field.setOpacity(1);
