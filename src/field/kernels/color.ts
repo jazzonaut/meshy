@@ -42,23 +42,23 @@ export function createColorKernel({ u, buffers, trail }: FieldContext, count: nu
     color = mix(color, mix(vec3(0.02, 0.04, 0.18), vec3(1.0, 0.65, 0.18), float(1).sub(r01)).add(vec3(0.15, 0.45, 1.0).mul(speed01)).mul(baseBright.mul(1.25)), step(11.5, u.motion).mul(float(1).sub(step(12.5, u.motion))));
     color = mix(color, mix(vec3(0.25, 1.0, 0.48), vec3(0.42, 0.42, 1.0), phase.sin().mul(0.5).add(0.5)).add(vec3(0.0, 0.9, 1.0).mul(speed01.mul(0.35))).mul(baseBright), step(12.5, u.motion).mul(float(1).sub(step(13.5, u.motion))));
     color = mix(color, mix(vec3(0.22, 0.08, 0.035), vec3(1.0, 0.34, 0.08), pulse.mul(float(1).sub(height01).add(0.15))).mul(baseBright.mul(1.15)), step(13.5, u.motion).mul(float(1).sub(step(14.5, u.motion))));
-    // 15–29 — Experimental modes. Each is still a single pass; palettes are keyed
-    // by the same index windows as the motion branches above.
-    color = mix(color, mix(vec3(0.02, 0.16, 0.32), vec3(0.7, 1.0, 1.0), pulse).mul(baseBright.mul(1.7)), step(14.5, u.motion).mul(float(1).sub(step(15.5, u.motion))));
-    color = mix(color, mix(vec3(0.9, 0.08, 0.55), vec3(0.1, 0.95, 1.0), phase.sin().mul(0.5).add(0.5)).mul(baseBright.mul(1.45)), step(15.5, u.motion).mul(float(1).sub(step(16.5, u.motion))));
-    color = mix(color, mix(vec3(0.22, 0.95, 0.42), vec3(1.0, 0.3, 0.18), sp).mul(baseBright.mul(1.35)).add(vec3(0.95, 1.0, 0.5).mul(speed01.mul(0.35))), step(16.5, u.motion).mul(float(1).sub(step(17.5, u.motion))));
-    color = mix(color, mix(vec3(0.03, 0.02, 0.12), vec3(0.95, 0.72, 1.0), float(1).sub(r01)).add(vec3(0.25, 0.55, 1.0).mul(speed01)), step(17.5, u.motion).mul(float(1).sub(step(18.5, u.motion))));
-    color = mix(color, mix(vec3(0.05, 0.45, 0.7), vec3(1.0, 0.28, 0.12), phase.sin().mul(0.5).add(0.5)).add(vec3(0.9, 1.0, 1.0).mul(speed01.mul(0.45))).mul(baseBright.mul(1.35)), step(18.5, u.motion).mul(float(1).sub(step(19.5, u.motion))));
-    color = mix(color, mix(vec3(0.08, 0.12, 0.18), vec3(0.35, 1.0, 0.72), pulse).add(userWarmCool.mul(0.25)).mul(baseBright.mul(1.4)), step(19.5, u.motion).mul(float(1).sub(step(20.5, u.motion))));
-    color = mix(color, mix(vec3(0.1, 0.18, 0.38), vec3(1.0, 0.94, 0.36), pow(cycle, 8.0)).add(vec3(0.25, 0.65, 1.0).mul(speed01)).mul(baseBright.mul(1.55)), step(20.5, u.motion).mul(float(1).sub(step(21.5, u.motion))));
-    color = mix(color, mix(vec3(0.82, 0.16, 0.8), vec3(0.95, 0.78, 0.42), step(0.5, height01)).mul(baseBright.mul(1.3)), step(21.5, u.motion).mul(float(1).sub(step(22.5, u.motion))));
-    color = mix(color, mix(vec3(0.08, 0.24, 0.55), vec3(1.0, 0.18, 0.72), pulse).add(vec3(0.55, 0.8, 1.0).mul(speed01.mul(0.5))).mul(baseBright.mul(1.55)), step(22.5, u.motion).mul(float(1).sub(step(23.5, u.motion))));
-    color = mix(color, mix(vec3(0.25, 0.1, 0.65), vec3(1.0, 0.92, 0.72), pow(cycle, 5.0)).mul(baseBright.mul(1.7)), step(23.5, u.motion).mul(float(1).sub(step(24.5, u.motion))));
-    color = mix(color, mix(vec3(0.42, 0.05, 0.58), vec3(1.0, 0.68, 0.22), r01).add(vec3(0.75, 0.45, 1.0).mul(pulse.mul(0.35))).mul(baseBright.mul(1.4)), step(24.5, u.motion).mul(float(1).sub(step(25.5, u.motion))));
-    color = mix(color, mix(vec3(0.18, 0.5, 0.92), vec3(1.0, 0.88, 0.5), mass).add(vec3(1.0, 1.0, 1.0).mul(star.mul(0.05))).mul(baseBright.mul(1.35)), step(25.5, u.motion).mul(float(1).sub(step(26.5, u.motion))));
-    color = mix(color, mix(vec3(0.25, 0.48, 0.42), vec3(1.0, 0.22, 0.08), height01).add(vec3(1.0, 0.85, 0.5).mul(speed01.mul(0.45))).mul(baseBright.mul(1.3)), step(26.5, u.motion).mul(float(1).sub(step(27.5, u.motion))));
-    color = mix(color, mix(vec3(0.15, 0.22, 0.55), vec3(0.9, 0.95, 1.0), phase.sin().mul(0.5).add(0.5)).mul(baseBright.mul(1.35)).add(userWarmCool.mul(0.12)), step(27.5, u.motion).mul(float(1).sub(step(28.5, u.motion))));
-    color = mix(color, mix(vec3(0.05, 0.18, 0.28), vec3(0.95, 0.95, 0.72), speed01).add(vec3(0.35, 0.7, 1.0).mul(pulse.mul(0.35))).mul(baseBright.mul(1.45)), step(28.5, u.motion).mul(float(1).sub(step(29.5, u.motion))));
+    // 15–29 — Experimental geometry/path modes. Palettes are intentionally more
+    // separated than the classics so switching modes changes the whole read.
+    color = mix(color, mix(vec3(0.02, 0.22, 0.26), vec3(0.92, 1.0, 0.78), speed01).add(vec3(0.25, 0.9, 1.0).mul(star.mul(0.06))).mul(baseBright.mul(1.65)), step(14.5, u.motion).mul(float(1).sub(step(15.5, u.motion))));
+    color = mix(color, mix(vec3(0.48, 0.02, 0.22), vec3(1.0, 0.72, 0.92), pow(pulse, 2.0)).add(vec3(1.0, 0.28, 0.18).mul(speed01.mul(0.35))).mul(baseBright.mul(1.5)), step(15.5, u.motion).mul(float(1).sub(step(16.5, u.motion))));
+    color = mix(color, mix(vec3(0.04, 0.28, 0.95), vec3(0.2, 1.0, 0.62), sp).add(vec3(1.0, 0.95, 0.35).mul(pow(speed01, 2.0).mul(0.55))).mul(baseBright.mul(1.45)), step(16.5, u.motion).mul(float(1).sub(step(17.5, u.motion))));
+    color = mix(color, mix(vec3(0.08, 0.08, 0.12), vec3(0.95, 0.95, 1.0), step(0.5, phase.sin().mul(0.5).add(0.5))).add(vec3(0.7, 0.3, 1.0).mul(r01.mul(0.35))).mul(baseBright.mul(1.45)), step(17.5, u.motion).mul(float(1).sub(step(18.5, u.motion))));
+    color = mix(color, mix(vec3(0.0, 0.62, 0.78), vec3(1.0, 0.18, 0.08), cycle).add(vec3(0.9, 1.0, 1.0).mul(pow(speed01, 3.0).mul(0.65))).mul(baseBright.mul(1.55)), step(18.5, u.motion).mul(float(1).sub(step(19.5, u.motion))));
+    color = mix(color, mix(vec3(0.02, 0.12, 0.18), vec3(0.55, 1.0, 0.48), height01).add(vec3(1.0, 0.86, 0.28).mul(pulse.mul(0.3))).mul(baseBright.mul(1.45)), step(19.5, u.motion).mul(float(1).sub(step(20.5, u.motion))));
+    color = mix(color, mix(vec3(0.02, 0.02, 0.08), vec3(1.0, 0.12, 0.58), pow(speed01, 1.5)).add(vec3(0.1, 0.9, 1.0).mul(cycle.mul(0.45))).mul(baseBright.mul(1.7)), step(20.5, u.motion).mul(float(1).sub(step(21.5, u.motion))));
+    color = mix(color, mix(vec3(0.16, 0.26, 0.18), vec3(1.0, 0.82, 0.32), pulse).add(vec3(0.92, 0.3, 0.78).mul(height01.mul(0.35))).mul(baseBright.mul(1.4)), step(21.5, u.motion).mul(float(1).sub(step(22.5, u.motion))));
+    color = mix(color, mix(vec3(0.02, 0.16, 0.52), vec3(1.0, 0.58, 0.08), height01).add(vec3(0.4, 1.0, 0.95).mul(speed01.mul(0.45))).mul(baseBright.mul(1.55)), step(22.5, u.motion).mul(float(1).sub(step(23.5, u.motion))));
+    color = mix(color, mix(vec3(0.0, 0.18, 0.2), vec3(0.86, 0.96, 1.0), r01).add(vec3(0.16, 1.0, 0.72).mul(pow(speed01, 2.0).mul(0.55))).mul(baseBright.mul(1.6)), step(23.5, u.motion).mul(float(1).sub(step(24.5, u.motion))));
+    color = mix(color, mix(vec3(0.28, 0.16, 0.55), vec3(1.0, 0.95, 0.55), step(0.5, sp)).add(vec3(0.58, 0.9, 1.0).mul(star.mul(0.06))).mul(baseBright.mul(1.45)), step(24.5, u.motion).mul(float(1).sub(step(25.5, u.motion))));
+    color = mix(color, mix(vec3(0.04, 0.20, 0.28), vec3(1.0, 0.48, 0.20), pulse).add(vec3(0.9, 1.0, 0.72).mul(speed01.mul(0.35))).mul(baseBright.mul(1.45)), step(25.5, u.motion).mul(float(1).sub(step(26.5, u.motion))));
+    color = mix(color, mix(vec3(0.18, 0.08, 0.04), vec3(1.0, 0.78, 0.38), pow(pulse, 3.0)).add(vec3(0.28, 0.78, 1.0).mul(speed01.mul(0.5))).mul(baseBright.mul(1.5)), step(26.5, u.motion).mul(float(1).sub(step(27.5, u.motion))));
+    color = mix(color, mix(vec3(0.04, 0.08, 0.24), vec3(0.82, 1.0, 0.94), phase.sin().mul(0.5).add(0.5)).add(vec3(1.0, 0.42, 0.72).mul(cycle.mul(0.3))).mul(baseBright.mul(1.45)), step(27.5, u.motion).mul(float(1).sub(step(28.5, u.motion))));
+    color = mix(color, mix(vec3(0.03, 0.05, 0.08), vec3(1.0, 0.9, 0.38), pow(speed01, 2.0)).add(vec3(0.15, 0.6, 1.0).mul(pulse.mul(0.55))).mul(baseBright.mul(1.65)), step(28.5, u.motion).mul(float(1).sub(step(29.5, u.motion))));
     // 30 — Boids: colour by speed (cool when cruising, hot when darting), with a
     // faint white kick so fast-moving leaders flare under bloom.
     color = mix(color, mix(vec3(0.12, 0.45, 1.0), vec3(1.0, 0.42, 0.12), speed01).add(vec3(0.7, 0.85, 1.0).mul(pow(speed01, 3.0).mul(0.6))).mul(baseBright.mul(1.4)), step(29.5, u.motion).mul(float(1).sub(step(30.5, u.motion))));

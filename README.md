@@ -1,9 +1,10 @@
 # Meshy — WebGPU Particle Field
 
 An interactive, GPU-driven particle field that renders dense, glowing point clouds
-arranged into filament/nebula structures, with 20 motion modes ranging from
-procedural force fields to genuinely emergent GPU simulations (boids, predator/prey,
-liquid surface tension, crystallisation, and a Physarum slime mould). Particles can
+arranged into filament/nebula structures, with 35 motion modes ranging from
+procedural force fields and geometric path studies to genuinely emergent GPU
+simulations (boids, predator/prey, liquid surface tension, crystallisation, and a
+Physarum slime mould). Particles can
 also morph into sampled shapes and 3D text.
 
 Everything runs on the GPU via Three.js TSL compute shaders — there is **no WebGL
@@ -105,7 +106,12 @@ Pulse Waves, Magnetic Field Lines, Tornado Column, Breathing Nebula, Implosion /
 Supernova, Orbital Shells, Color Sorting, Electric Arcs, Black Hole Accretion,
 Flocking Swarm, Ash Fall.
 
-**Emergent GPU modes (15–19):**
+**Experimental path modes (15–29):** Prism Lattice, Rose Knot, Lissajous Ribbons,
+Kaleidoscope Fold, Magnetic Trefoil, Signal Weave, Neon Raceway, Origami Bloom,
+Helix Conveyor, Torus Flux, Polyhedral Orbit, Spiral Staircase, Faultline Mandala,
+Time Loom, Storm Glyphs.
+
+**Emergent GPU modes (30–34):**
 
 - **Boids Flock** — real separation/alignment/cohesion via a spatial-hash grid.
 - **Predator Scatter** — flocking while fleeing a predator that follows your cursor.

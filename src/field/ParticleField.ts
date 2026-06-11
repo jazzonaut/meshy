@@ -68,6 +68,34 @@ export class ParticleField {
     renderer.compute(this.kColor);
   }
 
+  /**
+   * Pre-compile the compute pipelines the first frame will dispatch for the
+   * *current* motion mode (a shared link / preset may have set a non-default one),
+   * plus the colour pass. Awaiting these moves the WGSL → pipeline compile cost off
+   * the first-frame critical path so it can happen behind a loading screen. Mirrors
+   * the branch selection in {@link update}; runs each kernel once (a harmless
+   * sub-frame step) which is what triggers compilation.
+   */
+  async warmup() {
+    const c = this.renderer;
+    const motion = this.uniforms.motion.value;
+    if (motion === SLIME_MODE) {
+      await c.computeAsync(this.kSlime.deposit);
+      await c.computeAsync(this.kSlime.diffuse);
+      await c.computeAsync(this.kSlime.move);
+    } else if (motion >= FIRST_GPU_MODE) {
+      await c.computeAsync(this.kFlock.gridClear);
+      await c.computeAsync(this.kFlock.gridPopulate);
+      await c.computeAsync(this.kFlock.force);
+      await c.computeAsync(this.kFlock.integrate);
+    } else if (motion >= FIRST_EXPERIMENTAL_MODE) {
+      await c.computeAsync(this.kExperimental);
+    } else {
+      await c.computeAsync(this.kPerParticle);
+    }
+    await c.computeAsync(this.kColor);
+  }
+
   /** Re-run the init pass: re-arrange structure & colour with a fresh seed. */
   regenerate() {
     this.uniforms.seed.value += 1;

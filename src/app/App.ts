@@ -140,6 +140,20 @@ export class App {
     this.renderer.setAnimationLoop(this.frame);
   }
 
+  /**
+   * Compile the GPU pipelines the first frame will need — the active mode's compute
+   * kernels (via the field), the sprite material, and the bloom/afterImage post
+   * passes — so the shader-compile cost is paid behind the loading screen instead
+   * of as a visible first-frame stall. Best-effort: the render loop would compile
+   * these lazily anyway, so a failure here is non-fatal.
+   */
+  async warmup() {
+    await this.field.warmup();
+    // One render compiles the sprite material + the postprocessing node chain. The
+    // canvas is still hidden behind the loader, so this frame isn't seen.
+    this.post.render();
+  }
+
   // --- per-frame -------------------------------------------------------------
   private frame = () => {
     const delta = this.clock.getDelta();

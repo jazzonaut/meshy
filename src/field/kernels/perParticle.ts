@@ -191,181 +191,228 @@ export function createPerParticleKernel({ u, buffers, forces }: FieldContext, co
     }
 
     if (variant === 'experimental') {
-      // 15 — Data Sonar: expanding scan fronts reveal and push hidden shells.
+      // 15 — Prism Lattice: particles snap to animated cube-edge rails, then slide
+      // around the cage so the cloud reads as a bright geometric scaffold.
       If(u.motion.equal(15), () => {
-      const dist = pos.length();
-      const dirn = pos.div(dist.add(0.001));
-      const scan = dist.mul(0.38).sub(u.time.mul(u.timeSpeed.mul(18.0))).add(phase.mul(0.2)).sin();
-      const ridge = pow(scan.mul(0.5).add(0.5), 10.0);
-      vel.addAssign(dirn.mul(ridge.mul(u.flowStrength.mul(7.0))).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.45)).mul(dt));
+        const r = u.radius.mul(0.46);
+        const sx = step(0.0, home.x).mul(2.0).sub(1.0);
+        const sy = step(0.0, home.y).mul(2.0).sub(1.0);
+        const sz = step(0.0, home.z).mul(2.0).sub(1.0);
+        const scan = u.time.mul(u.timeSpeed.mul(7.0)).add(phase);
+        const railA = vec3(sx.mul(r), sy.mul(r), scan.sin().mul(r));
+        const railB = vec3(scan.cos().mul(r), sy.mul(r), sz.mul(r));
+        const target = mix(railA, railB, step(1.0, mass));
+        const tangent = cross(target.normalize(), vec3(0.45, 1.0, 0.25).normalize()).normalize();
+        vel.addAssign(target.sub(pos).mul(u.spring.mul(1.2)).mul(dt));
+        vel.addAssign(tangent.mul(u.flowStrength.mul(1.4)).mul(dt));
       });
 
-    // 16 — Dream Glitch: quantised target planes, scanline tears, then recovery.
+    // 16 — Rose Knot: layered polar petals rotate through each other and pull the
+    // field into a flower-like knot instead of a soft ball.
     If(u.motion.equal(16), () => {
-      const grid = vec3(
-        pos.x.mul(0.55).add(phase).sin(),
-        pos.y.mul(0.9).add(u.time.mul(u.timeSpeed.mul(10.0))).sin(),
-        pos.z.mul(0.55).sub(phase).cos(),
-      );
-      const tear = step(0.72, phase.add(u.time.mul(u.timeSpeed.mul(8.0))).sin().mul(0.5).add(0.5));
-      vel.addAssign(grid.mul(u.flowStrength.mul(tear.add(0.25))).mul(dt));
-      vel.addAssign(vec3(phase.sin(), 0, phase.cos()).mul(tear.mul(u.flowStrength.mul(2.0))).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.35)).mul(dt));
-    });
-
-    // 17 — Ecosystem: warm/cool species occupy different territories and chase
-    // moving nutrient fronts, creating bloom/collapse cycles without extra state.
-    If(u.motion.equal(17), () => {
-      const temp = sp.mul(2.0).sub(1.0);
-      const orbit = u.time.mul(u.timeSpeed.mul(3.0)).add(temp.mul(1.7));
-      const nutrient = vec3(orbit.cos(), orbit.mul(1.3).sin().mul(0.45), orbit.sin()).mul(u.radius.mul(0.42));
-      const d = nutrient.sub(pos);
-      const dn = d.div(d.length().add(0.001));
-      const rival = vec3(nutrient.x.mul(-1), nutrient.y.mul(-0.5), nutrient.z.mul(-1));
-      const rd = pos.sub(rival);
-      vel.addAssign(dn.mul(u.flowStrength.mul(1.4)).mul(dt));
-      vel.addAssign(rd.div(rd.length().add(0.001)).mul(temp.mul(u.flowStrength.mul(0.45))).mul(dt));
-      vel.addAssign(cn(pos.mul(u.flowScale).add(vec3(temp, u.time.mul(u.timeSpeed), 0))).mul(u.flowStrength.mul(0.5)).mul(dt));
-    });
-
-    // 18 — Gravity Lens: twin invisible masses bend paths into lensing arcs.
-    If(u.motion.equal(18), () => {
-      const ang = u.time.mul(u.timeSpeed.mul(2.0));
-      const lensA = vec3(ang.cos(), ang.mul(0.7).sin().mul(0.25), ang.sin()).mul(u.radius.mul(0.38));
-      const lensB = lensA.mul(-1);
-      const da = lensA.sub(pos);
-      const db = lensB.sub(pos);
-      const la = da.length().add(0.6);
-      const lb = db.length().add(0.6);
-      vel.addAssign(da.div(la).mul(u.flowStrength.mul(12.0).div(la.mul(la).add(1.0))).mul(dt));
-      vel.addAssign(db.div(lb).mul(u.flowStrength.mul(12.0).div(lb.mul(lb).add(1.0))).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.12)).mul(dt));
-    });
-
-    // 19 — Magnetic Sculptor: particles trace flux loops between animated poles.
-    If(u.motion.equal(19), () => {
-      const ang = u.time.mul(u.timeSpeed.mul(2.5));
-      const poleA = vec3(ang.cos(), 0.18, ang.sin()).mul(u.radius.mul(0.5));
-      const poleB = vec3(ang.add(3.14159).cos(), -0.18, ang.add(3.14159).sin()).mul(u.radius.mul(0.5));
-      const toA = poleA.sub(pos);
-      const toB = poleB.sub(pos);
-      const field = toA.div(toA.length().add(0.4)).sub(toB.div(toB.length().add(0.4)));
-      vel.addAssign(cross(field.normalize(), vec3(0, 1, 0)).mul(u.flowStrength.mul(1.6)).mul(dt));
-      vel.addAssign(field.mul(u.flowStrength.mul(0.9)).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.18)).mul(dt));
-    });
-
-    // 20 — Memory Field: home-space filaments act like paths the field keeps
-    // returning to; drawn pointer strokes layer on top via the shared pointer well.
-    If(u.motion.equal(20), () => {
-      const path = vec3(
-        home.y.mul(0.28).add(phase).sin().mul(u.radius.mul(0.32)),
-        home.y,
-        home.y.mul(0.23).add(phase.mul(1.9)).cos().mul(u.radius.mul(0.32)),
-      );
-      vel.addAssign(path.sub(pos).mul(u.spring.mul(0.75)).mul(dt));
-      vel.addAssign(cn(pos.mul(u.flowScale).add(vec3(0, u.time.mul(u.timeSpeed), phase.cos()))).mul(u.flowStrength.mul(0.45)).mul(dt));
-    });
-
-    // 21 — Neural Firing: refractory waves charge clusters, then launch pulses
-    // along branching axon-like guides.
-    If(u.motion.equal(21), () => {
-      const charge = phase.add(u.time.mul(u.timeSpeed.mul(14.0))).sin().mul(0.5).add(0.5);
-      const fire = pow(charge, 8.0);
-      const axis = vec3(home.y.mul(0.17).add(phase).sin(), 1.0, home.x.mul(0.14).add(phase).cos()).normalize();
-      vel.addAssign(axis.mul(fire.mul(u.flowStrength.mul(8.0))).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.25)).mul(dt));
-      vel.addAssign(cn(pos.mul(u.flowScale.mul(1.8))).mul(u.flowStrength.mul(0.35)).mul(dt));
-    });
-
-    // 22 — Origami Fold: animated crease planes fold the volume into facets.
-    If(u.motion.equal(22), () => {
-      const n = vec3(phase.sin().mul(0.65), 1.0, phase.cos().mul(0.65)).normalize();
-      const side = pos.x.mul(n.x).add(pos.y.mul(n.y)).add(pos.z.mul(n.z));
-      const crease = side.add(u.time.mul(u.timeSpeed.mul(8.0)).sin().mul(u.radius.mul(0.25)));
-      const folded = pos.sub(n.mul(crease.mul(1.6)));
-      const target = mix(home, folded, step(0.0, crease));
-      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.15)).mul(dt));
-      vel.addAssign(cross(n, pos.normalize()).mul(u.flowStrength.mul(0.45)).mul(dt));
-    });
-
-    // 23 — Plasma Globe: central core launches filaments that attach to moving
-    // contact points; the shared pointer well makes this especially touchable.
-    If(u.motion.equal(23), () => {
-      const dist = pos.length();
-      const dirn = pos.div(dist.add(0.001));
-      const arc = phase.add(u.time.mul(u.timeSpeed.mul(9.0))).sin().mul(0.5).add(0.5);
-      const contact = vec3(phase.sin(), phase.mul(1.7).cos().mul(0.55), phase.cos()).mul(u.radius.mul(0.62));
-      const wire = contact.mul(arc);
-      vel.addAssign(wire.sub(pos).mul(u.spring.mul(0.55)).mul(dt));
-      vel.addAssign(dirn.mul(u.flowStrength.mul(0.8).div(dist.mul(0.08).add(1.0))).mul(dt));
-    });
-
-    // 24 — Quantum Foam: particles flicker between pair wells, annihilating into
-    // radial shocklets that keep the field noisy and microscopic.
-    If(u.motion.equal(24), () => {
-      const pair = vec3(phase.sin(), phase.mul(1.37).cos(), phase.mul(0.73).sin()).mul(u.radius.mul(0.22));
-      const flip = step(0.5, phase.add(u.time.mul(u.timeSpeed.mul(12.0))).sin().mul(0.5).add(0.5)).mul(2.0).sub(1.0);
-      const target = pair.mul(flip);
-      const dist = pos.sub(target).length();
-      const pop = pow(dist.mul(0.5).sub(u.time.mul(u.timeSpeed.mul(10.0))).add(phase).sin().mul(0.5).add(0.5), 9.0);
-      vel.addAssign(target.sub(pos).mul(u.spring.mul(0.55)).mul(dt));
-      vel.addAssign(pos.div(pos.length().add(0.001)).mul(pop.mul(u.flowStrength.mul(5.0))).mul(dt));
-    });
-
-    // 25 — Ritual Circle: symmetric rings, spokes and orbiting glyph knots.
-    If(u.motion.equal(25), () => {
-      const dist = vec3(pos.x, 0, pos.z).length();
-      const dirn = vec3(pos.x, 0, pos.z).div(dist.add(0.001));
-      const ring = u.radius.mul(0.22).add(mass.mul(u.radius.mul(0.42)));
-      const glyph = phase.mul(6.0).add(u.time.mul(u.timeSpeed.mul(4.0))).sin().mul(u.radius.mul(0.06));
-      const target = dirn.mul(ring.add(glyph)).add(vec3(0, phase.sin().mul(u.radius.mul(0.08)), 0));
-      vel.addAssign(target.sub(pos).mul(u.spring).mul(dt));
-      vel.addAssign(cross(dirn, vec3(0, 1, 0)).mul(u.flowStrength.mul(1.1)).mul(dt));
-    });
-
-    // 26 — Swarm Architecture: self-assembling arches and bridge spans.
-    If(u.motion.equal(26), () => {
-      const lane = step(0.5, sp).mul(2.0).sub(1.0);
-      const span = home.x.div(u.radius).mul(3.14159);
-      const archY = span.cos().mul(u.radius.mul(0.22)).add(u.radius.mul(0.12));
-      const target = vec3(home.x, archY.mul(mass.add(0.45)), lane.mul(u.radius.mul(0.28)));
-      vel.addAssign(target.sub(pos).mul(u.spring.mul(0.9)).mul(dt));
-      vel.addAssign(cn(pos.mul(u.flowScale).add(vec3(u.time.mul(u.timeSpeed), 0, lane))).mul(u.flowStrength.mul(0.25)).mul(dt));
-    });
-
-    // 27 — Tectonic Plates: slabs shear in opposite directions and buckle upward
-    // near procedural fault lines.
-    If(u.motion.equal(27), () => {
-      const plate = step(0.0, home.x.add(home.z.mul(0.35).add(phase.sin().mul(2.0)))).mul(2.0).sub(1.0);
-      const fault = pow(float(1).sub(min(abs(home.x.add(home.z.mul(0.35))).div(u.radius.mul(0.45)), 1.0)), 3.0);
-      vel.addAssign(vec3(plate.mul(u.flowStrength), fault.mul(u.flowStrength.mul(2.2)), plate.mul(u.flowStrength.mul(-0.45))).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.35)).mul(dt));
-    });
-
-    // 28 — Time Echo: delayed-looking orbital selves, using phase offsets and
-    // damping to create temporal ghosts without storing history.
-    If(u.motion.equal(28), () => {
-      const delay = phase.mul(0.35);
-      const a = u.time.mul(u.timeSpeed.mul(4.0)).sub(delay);
+      const a = u.time.mul(u.timeSpeed.mul(5.0)).add(phase);
+      const petal = a.mul(4.0).sin().mul(0.5).add(0.5);
+      const r = u.radius.mul(0.16).add(pow(petal, 2.0).mul(u.radius.mul(0.34)));
       const target = vec3(
-        home.x.mul(a.cos()).sub(home.z.mul(a.sin())),
-        home.y.mul(a.mul(0.7).cos()),
-        home.x.mul(a.sin()).add(home.z.mul(a.cos())),
+        a.cos().mul(r),
+        a.mul(2.0).sin().mul(u.radius.mul(0.18)).add(sp.sub(0.5).mul(u.radius.mul(0.22))),
+        a.sin().mul(r),
       );
-      vel.addAssign(target.sub(pos).mul(u.spring.mul(0.65)).mul(dt));
-      vel.addAssign(cn(pos.mul(u.flowScale).add(vec3(delay.sin(), 0, delay.cos()))).mul(u.flowStrength.mul(0.35)).mul(dt));
+      const tangent = vec3(a.sin().mul(-1), a.mul(2.0).cos().mul(0.7), a.cos()).normalize();
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.05)).mul(dt));
+      vel.addAssign(tangent.mul(u.flowStrength.mul(1.7)).mul(dt));
     });
 
-    // 29 — Weather System: pressure cells, storm bands and lightning-like gusts.
+    // 17 — Lissajous Ribbons: three harmonic curves braid through the volume,
+    // with species offsetting into separate luminous strands.
+    If(u.motion.equal(17), () => {
+      const lane = sp.mul(2.0).sub(1.0);
+      const a = u.time.mul(u.timeSpeed.mul(4.5)).add(phase);
+      const target = vec3(
+        a.mul(3.0).add(lane).sin().mul(u.radius.mul(0.48)),
+        a.mul(4.0).add(mass).sin().mul(u.radius.mul(0.28)),
+        a.mul(5.0).add(phase.mul(0.35)).sin().mul(u.radius.mul(0.48)),
+      );
+      const tangent = vec3(
+        a.mul(3.0).add(lane).cos().mul(3.0),
+        a.mul(4.0).add(mass).cos().mul(2.0),
+        a.mul(5.0).add(phase.mul(0.35)).cos().mul(5.0),
+      ).normalize();
+      vel.addAssign(target.sub(pos).mul(u.spring).mul(dt));
+      vel.addAssign(tangent.mul(u.flowStrength.mul(1.5)).mul(dt));
+    });
+
+    // 18 — Kaleidoscope Fold: moving mirror planes fold the volume into rotating
+    // facets, then throw particles sideways along the crease.
+    If(u.motion.equal(18), () => {
+      const a = u.time.mul(u.timeSpeed.mul(3.0)).add(phase.mul(0.35));
+      const n = vec3(a.sin().mul(0.8), a.mul(1.7).cos().mul(0.6), a.cos().mul(0.8)).normalize();
+      const side = pos.x.mul(n.x).add(pos.y.mul(n.y)).add(pos.z.mul(n.z));
+      const fold = step(0.0, side.add(a.mul(2.0).sin().mul(u.radius.mul(0.08))));
+      const mirrored = pos.sub(n.mul(side.mul(2.0)));
+      const radial = home.normalize().mul(u.radius.mul(0.24).add(mass.mul(u.radius.mul(0.24))));
+      const target = mix(radial, mirrored, fold);
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.25)).mul(dt));
+      vel.addAssign(cross(n, pos.normalize()).mul(u.flowStrength.mul(1.15)).mul(dt));
+    });
+
+    // 19 — Magnetic Trefoil: a real knot path with a secondary magnetic roll, so
+    // particles circulate along a sculptural loop rather than diffuse around poles.
+    If(u.motion.equal(19), () => {
+      const a = u.time.mul(u.timeSpeed.mul(4.0)).add(phase);
+      const target = vec3(
+        a.sin().add(a.mul(2.0).sin().mul(2.0)).mul(u.radius.mul(0.16)),
+        a.cos().sub(a.mul(2.0).cos().mul(2.0)).mul(u.radius.mul(0.16)),
+        a.mul(3.0).sin().mul(u.radius.mul(-0.16)),
+      );
+      const field = target.sub(pos);
+      const tangent = cross(field.normalize(), vec3(a.cos(), 0.7, a.sin()).normalize()).normalize();
+      vel.addAssign(field.mul(u.spring.mul(1.15)).mul(dt));
+      vel.addAssign(tangent.mul(u.flowStrength.mul(1.8)).mul(dt));
+    });
+
+    // 20 — Signal Weave: woven lanes run through the field like oscilloscope wire,
+    // alternating over and under by species.
+    If(u.motion.equal(20), () => {
+      const lane = sp.mul(2.0).sub(1.0);
+      const s = home.y.mul(0.22).add(u.time.mul(u.timeSpeed.mul(5.0))).add(phase);
+      const target = vec3(
+        s.sin().mul(u.radius.mul(0.38)),
+        home.y.mul(0.82),
+        s.mul(2.0).cos().mul(u.radius.mul(0.18)).add(lane.mul(u.radius.mul(0.22))),
+      );
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.1)).mul(dt));
+      vel.addAssign(vec3(s.cos(), 0.55, s.mul(2.0).sin().mul(-1)).normalize().mul(u.flowStrength.mul(1.35)).mul(dt));
+    });
+
+    // 21 — Neon Raceway: particles lap around tilted tracks, with speed streaks
+    // and lane changes based on particle species.
+    If(u.motion.equal(21), () => {
+      const lane = mass.sub(0.5);
+      const a = u.time.mul(u.timeSpeed.mul(7.0)).add(phase);
+      const r = u.radius.mul(0.26).add(lane.mul(u.radius.mul(0.13)));
+      const target = vec3(
+        a.cos().mul(r),
+        a.mul(2.0).sin().mul(u.radius.mul(0.11)).add(sp.sub(0.5).mul(u.radius.mul(0.2))),
+        a.sin().mul(r),
+      );
+      const boost = pow(a.mul(3.0).sin().mul(0.5).add(0.5), 5.0);
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(0.95)).mul(dt));
+      vel.addAssign(vec3(a.sin().mul(-1), a.mul(2.0).cos().mul(0.35), a.cos()).normalize().mul(u.flowStrength.mul(1.6).add(boost.mul(3.0))).mul(dt));
+    });
+
+    // 22 — Origami Bloom: the cloud opens and closes between a polyhedron and
+    // petal arcs, with crisp crease motion.
+    If(u.motion.equal(22), () => {
+      const a = phase.add(u.time.mul(u.timeSpeed.mul(2.8)));
+      const petal = pow(a.mul(6.0).sin().mul(0.5).add(0.5), 2.0);
+      const dirn = home.normalize();
+      const shell = u.radius.mul(0.18).add(petal.mul(u.radius.mul(0.34)));
+      const crease = vec3(a.sin().mul(0.7), a.mul(1.3).cos(), a.cos().mul(0.7)).normalize();
+      const folded = dirn.mul(shell).add(crease.mul(petal.sub(0.5).mul(u.radius.mul(0.16))));
+      vel.addAssign(folded.sub(pos).mul(u.spring.mul(1.3)).mul(dt));
+      vel.addAssign(cross(crease, dirn).mul(u.flowStrength.mul(0.9)).mul(dt));
+    });
+
+    // 23 — Helix Conveyor: particles ride counter-wound conveyor helices that
+    // climb through the volume.
+    If(u.motion.equal(23), () => {
+      const handed = sp.mul(2.0).sub(1.0);
+      const y = home.y.mul(0.85);
+      const a = y.mul(0.28).add(u.time.mul(u.timeSpeed.mul(6.0)).mul(handed)).add(phase);
+      const r = u.radius.mul(0.24).add(a.mul(3.0).sin().mul(u.radius.mul(0.05)));
+      const target = vec3(a.cos().mul(r), y, a.sin().mul(r));
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.1)).mul(dt));
+      vel.addAssign(vec3(a.sin().mul(-1).mul(handed), 0.8, a.cos().mul(handed)).normalize().mul(u.flowStrength.mul(1.55)).mul(dt));
+    });
+
+    // 24 — Torus Flux: particles chase nested torus-knot paths, then roll around
+    // the tube so the form keeps moving after it coheres.
+    If(u.motion.equal(24), () => {
+      const a = u.time.mul(u.timeSpeed.mul(4.2)).add(phase);
+      const tube = a.mul(3.0).add(mass).sin();
+      const major = u.radius.mul(0.32);
+      const minor = u.radius.mul(0.09).add(mass.sub(0.5).mul(u.radius.mul(0.035)));
+      const ring = major.add(tube.mul(minor));
+      const target = vec3(
+        a.mul(2.0).cos().mul(ring),
+        a.mul(3.0).cos().mul(minor.mul(1.2)),
+        a.mul(2.0).sin().mul(ring),
+      );
+      vel.addAssign(target.sub(pos).mul(u.spring).mul(dt));
+      vel.addAssign(cross(target.normalize(), pos.sub(target).normalize()).mul(u.flowStrength.mul(1.7)).mul(dt));
+    });
+
+    // 25 — Polyhedral Orbit: particles select hard-corner vertices and orbit the
+    // implied faces, producing a faceted object with moving edges.
+    If(u.motion.equal(25), () => {
+      const sx = step(0.0, phase.sin()).mul(2.0).sub(1.0);
+      const sy = step(0.0, phase.mul(1.7).sin()).mul(2.0).sub(1.0);
+      const sz = step(0.0, phase.mul(2.3).cos()).mul(2.0).sub(1.0);
+      const vertex = vec3(sx, sy, sz).normalize().mul(u.radius.mul(0.48));
+      const a = u.time.mul(u.timeSpeed.mul(4.5)).add(phase);
+      const faceOrbit = cross(vertex.normalize(), vec3(0.2, 1.0, 0.35).normalize()).normalize().mul(a.sin().mul(u.radius.mul(0.12)));
+      const target = vertex.add(faceOrbit);
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.15)).mul(dt));
+      vel.addAssign(cross(vertex.normalize(), pos.normalize()).mul(u.flowStrength.mul(1.3)).mul(dt));
+    });
+
+    // 26 — Spiral Staircase: stepped orbital shelves with upward travel.
+    If(u.motion.equal(26), () => {
+      const a = home.y.mul(0.22).add(u.time.mul(u.timeSpeed.mul(4.5))).add(phase.mul(0.2));
+      const stepBand = step(0.0, a.mul(5.0).sin()).mul(2.0).sub(1.0);
+      const r = u.radius.mul(0.18).add(mass.mul(u.radius.mul(0.18)));
+      const target = vec3(
+        a.cos().mul(r),
+        home.y.mul(0.75).add(stepBand.mul(u.radius.mul(0.045))),
+        a.sin().mul(r),
+      );
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.1)).mul(dt));
+      vel.addAssign(vec3(a.sin().mul(-1), 0.65, a.cos()).normalize().mul(u.flowStrength.mul(1.4)).mul(dt));
+    });
+
+    // 27 — Faultline Mandala: radial spokes shear across a moving crack and pulse
+    // into nested mandala rings.
+    If(u.motion.equal(27), () => {
+      const dist = vec3(home.x, 0, home.z).length();
+      const dirn = vec3(home.x, 0, home.z).div(dist.add(0.001));
+      const spoke = pow(dirn.x.mul(5.0).add(dirn.z.mul(3.0)).add(u.time.mul(u.timeSpeed.mul(4.0))).sin().mul(0.5).add(0.5), 4.0);
+      const ring = u.radius.mul(0.16).add(mass.mul(u.radius.mul(0.32))).add(spoke.mul(u.radius.mul(0.08)));
+      const fault = step(0.0, home.x.add(home.z.mul(0.45)).add(u.time.mul(u.timeSpeed.mul(3.0)).sin().mul(u.radius.mul(0.1)))).mul(2.0).sub(1.0);
+      const target = dirn.mul(ring).add(vec3(fault.mul(u.radius.mul(0.06)), spoke.mul(u.radius.mul(0.14)), fault.mul(u.radius.mul(-0.06))));
+      vel.addAssign(target.sub(pos).mul(u.spring).mul(dt));
+      vel.addAssign(cross(dirn, vec3(0, 1, 0)).mul(u.flowStrength.mul(1.25).mul(fault)).mul(dt));
+    });
+
+    // 28 — Time Loom: delayed ellipses weave through each other like animated
+    // warp and weft threads.
+    If(u.motion.equal(28), () => {
+      const delay = phase.mul(0.55);
+      const a = u.time.mul(u.timeSpeed.mul(4.6)).sub(delay);
+      const lane = step(0.5, sp).mul(2.0).sub(1.0);
+      const target = vec3(
+        a.sin().mul(u.radius.mul(0.42)),
+        a.mul(2.0).add(delay).sin().mul(u.radius.mul(0.22)).add(lane.mul(u.radius.mul(0.16))),
+        a.mul(3.0).cos().mul(u.radius.mul(0.34)),
+      );
+      vel.addAssign(target.sub(pos).mul(u.spring.mul(1.05)).mul(dt));
+      vel.addAssign(vec3(a.cos(), a.mul(2.0).cos(), a.mul(3.0).sin().mul(-1)).normalize().mul(u.flowStrength.mul(1.35)).mul(dt));
+    });
+
+    // 29 — Storm Glyphs: cyclone bands are constrained into sharp moving symbols,
+    // with lightning pulses snapping particles between strokes.
       If(u.motion.equal(29), () => {
-      const pressure = cn(pos.mul(u.flowScale).add(vec3(u.time.mul(u.timeSpeed), phase.sin(), phase.cos())));
-      const cell = vec3(pressure.z.mul(-1), pressure.y.mul(0.6), pressure.x);
-      const storm = pow(phase.add(u.time.mul(u.timeSpeed.mul(8.0))).sin().mul(0.5).add(0.5), 5.0);
-      vel.addAssign(cell.mul(u.flowStrength.mul(1.4)).mul(dt));
-      vel.addAssign(vec3(0, storm.mul(u.flowStrength.mul(-1.2)), 0).mul(dt));
-      vel.addAssign(home.sub(pos).mul(u.spring.mul(0.18)).mul(dt));
+      const a = u.time.mul(u.timeSpeed.mul(5.4)).add(phase);
+      const bolt = pow(a.mul(4.0).sin().mul(0.5).add(0.5), 8.0);
+      const r = u.radius.mul(0.18).add(a.mul(3.0).sin().mul(0.5).add(0.5).mul(u.radius.mul(0.34)));
+      const glyph = vec3(
+        a.cos().mul(r).add(a.mul(5.0).sin().mul(bolt).mul(u.radius.mul(0.12))),
+        a.mul(2.0).sin().mul(u.radius.mul(0.24)),
+        a.sin().mul(r).add(a.mul(7.0).cos().mul(bolt).mul(u.radius.mul(0.12))),
+      );
+      vel.addAssign(glyph.sub(pos).mul(u.spring).mul(dt));
+      vel.addAssign(vec3(a.sin().mul(-1), bolt.mul(1.6).sub(0.2), a.cos()).normalize().mul(u.flowStrength.mul(1.6).add(bolt.mul(3.5))).mul(dt));
+      vel.addAssign(cn(pos.mul(u.flowScale).add(vec3(a.sin(), a.cos(), phase.cos()))).mul(u.flowStrength.mul(0.25)).mul(dt));
       });
     }
 
